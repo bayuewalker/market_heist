@@ -136,7 +136,7 @@ export default function Pricing() {
                   </Button>
                 ) : (
                   <Button
-                    href="#top"
+                    href="/signup"
                     variant={plan.highlighted ? "primary" : "secondary"}
                     className="w-full"
                   >

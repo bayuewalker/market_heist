@@ -1,9 +1,8 @@
 /**
- * Prefix a public asset path with the configured base path so it resolves
- * correctly both locally and under the GitHub Pages project sub-path.
- *
- * Use this for assets referenced outside of `next/image` (e.g. <video>, CSS
- * url()), since those do not get the base path applied automatically.
+ * Resolve a public asset path. On Vercel the app is served from the root
+ * domain, so this is effectively an identity helper; it stays in place so
+ * assets referenced outside of `next/image` (e.g. <video>) have a single,
+ * consistent source of truth if a base path is ever reintroduced.
  */
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
