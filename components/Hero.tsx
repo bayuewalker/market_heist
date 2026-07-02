@@ -57,7 +57,7 @@ export default function Hero() {
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button href="#pricing" size="lg">
+            <Button href="/signup" size="lg">
               Access now
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
