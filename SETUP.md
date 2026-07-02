@@ -10,12 +10,17 @@ There are **3 one-time steps** to make the dashboard live.
 
 ## 1. Run the database schema in Supabase
 
-Open your Supabase project → **SQL Editor** → **New query**, paste the contents of
-[`supabase/migrations/0001_init.sql`](./supabase/migrations/0001_init.sql), and run it.
+Open your Supabase project → **SQL Editor** → **New query**, then run these
+migrations **in order**:
 
-This creates the `plans`, `profiles`, and `signals` tables, Row Level Security
+1. [`supabase/migrations/0001_init.sql`](./supabase/migrations/0001_init.sql)
+2. [`supabase/migrations/0002_restrict_plan_changes.sql`](./supabase/migrations/0002_restrict_plan_changes.sql)
+
+`0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
-profile on sign-up, and seeds the Basic / Pro / Elite plans.
+profile on sign-up, and seeds the Basic / Pro / Elite plans. `0002` tightens the
+profile update policy so users can only self-select the `basic`/`pro` tiers
+(they can't self-upgrade to the unlimited `elite` tier).
 
 ### Auth settings
 
