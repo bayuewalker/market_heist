@@ -15,12 +15,13 @@ migrations **in order**:
 
 1. [`supabase/migrations/0001_init.sql`](./supabase/migrations/0001_init.sql)
 2. [`supabase/migrations/0002_restrict_plan_changes.sql`](./supabase/migrations/0002_restrict_plan_changes.sql)
+3. [`supabase/migrations/0003_payments.sql`](./supabase/migrations/0003_payments.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
-profile on sign-up, and seeds the Basic / Pro / Elite plans. `0002` tightens the
-profile update policy so users can only self-select the `basic`/`pro` tiers
-(they can't self-upgrade to the unlimited `elite` tier).
+profile on sign-up, and seeds the Basic / Pro / Elite plans. `0002`/`0003` lock
+down plan changes so a plan can only change server-side after a **verified
+on-chain payment**, and add the `payments` table + `profiles.plan_expires_at`.
 
 ### Auth settings
 
@@ -44,10 +45,26 @@ In the Vercel project → **Settings → Environment Variables**, add:
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://tcrerqdfvpbbyshvsaqm.supabase.co` | Public |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | your Supabase **anon / publishable** key | Public, safe in the browser |
-| `NVIDIA_API_KEY` | your `nvapi-...` key | **Secret** — server only, never `NEXT_PUBLIC_` |
-| `NVIDIA_MODEL` | `meta/llama-3.3-70b-instruct` | Optional (this is the default) |
+| `SUPABASE_SERVICE_ROLE_KEY` | your Supabase **service_role** key | **Secret** — used to confirm payments; never `NEXT_PUBLIC_` |
+| `NVIDIA_API_KEY` | your `nvapi-...` key | **Secret** — server only |
+| `NVIDIA_MODEL` | `meta/llama-3.3-70b-instruct` | Optional (default) |
+| `PAYMENT_TRON_ADDRESS` | your TRON **USDT (TRC20)** wallet address | Where members send USDT |
+| `TRONGRID_API_KEY` | TronGrid API key | Optional (raises rate limits) |
+| `CRON_SECRET` | long random string | Recommended — protects the payment cron |
 
 Find the Supabase keys in **Project Settings → API**. After saving, **redeploy**.
+
+### Payments (USDT on TRON / TRC20)
+
+Members pay by sending **USDT (TRC20)** to `PAYMENT_TRON_ADDRESS`. Each order
+gets a unique amount so the server can match the incoming transfer on-chain (via
+TronGrid) and extend the member's plan (`plan_expires_at`). No third-party
+gateway holds funds — USDT lands directly in your wallet.
+
+- Billing is **pay-per-period** (30 days / annual); no card-style auto-renew.
+- The client polls `/api/payments/status` while the user is on the billing page;
+  an hourly Vercel Cron (`/api/payments/check`, see `vercel.json`) sweeps any it
+  missed. Set `CRON_SECRET` so Vercel Cron can authenticate.
 
 > Only the **anon** key goes in the browser. The `service_role` key is not used by
 > this app and must never be exposed. Signals are inserted as the logged-in user,

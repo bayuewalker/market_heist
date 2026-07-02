@@ -23,7 +23,26 @@ export type ProfileRow = {
   email: string | null;
   full_name: string | null;
   plan_id: string;
+  plan_expires_at: string | null;
   created_at: string;
+};
+
+export type PaymentPeriod = "monthly" | "annual";
+export type PaymentStatus = "pending" | "confirmed" | "expired";
+
+export type PaymentRow = {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  period: PaymentPeriod;
+  amount_usdt: number;
+  address: string;
+  network: string;
+  status: PaymentStatus;
+  tx_hash: string | null;
+  created_at: string;
+  expires_at: string;
+  confirmed_at: string | null;
 };
 
 export type SignalRow = {
@@ -63,6 +82,18 @@ export type Database = {
         Insert: Omit<SignalRow, "id" | "created_at"> &
           Partial<Pick<SignalRow, "id" | "created_at">>;
         Update: Partial<SignalRow>;
+        Relationships: [];
+      };
+      payments: {
+        Row: PaymentRow;
+        Insert: Omit<
+          PaymentRow,
+          "id" | "created_at" | "network" | "status" | "tx_hash" | "confirmed_at"
+        > &
+          Partial<
+            Pick<PaymentRow, "id" | "created_at" | "network" | "status" | "tx_hash" | "confirmed_at">
+          >;
+        Update: Partial<PaymentRow>;
         Relationships: [];
       };
     };
