@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const pair = String(body.pair ?? "").trim().toUpperCase().slice(0, 40);
+  const pair = String(body.pair ?? "").trim().slice(0, 40).toUpperCase();
   if (!pair) {
     return NextResponse.json({ error: "A trading pair is required." }, { status: 400 });
   }
