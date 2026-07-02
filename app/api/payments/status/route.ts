@@ -19,7 +19,11 @@ export async function GET(request: Request) {
   const { data: payment } = await supabase.from("payments").select("*").eq("id", id).single();
   if (!payment) return NextResponse.json({ error: "Order not found." }, { status: 404 });
 
-  const status = payment.status === "pending" ? await tryConfirmPayment(payment) : payment.status;
+  // Throttle client-driven on-chain checks to at most once per 6s per order.
+  const status =
+    payment.status === "pending"
+      ? await tryConfirmPayment(payment, { throttleMs: 6000 })
+      : payment.status;
 
   return NextResponse.json({
     status,

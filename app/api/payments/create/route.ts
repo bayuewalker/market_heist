@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { planAmountUsd, uniqueAmount, ORDER_TTL_MINUTES } from "@/lib/pricing";
-import type { PaymentPeriod } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +28,10 @@ export async function POST(request: Request) {
   }
 
   const planId = String(body.plan_id ?? "");
-  const period = body.period === "annual" ? "annual" : ("monthly" as PaymentPeriod);
+  const period = body.period;
+  if (period !== "monthly" && period !== "annual") {
+    return NextResponse.json({ error: "Invalid billing period." }, { status: 400 });
+  }
 
   const { data: plan } = await supabase
     .from("plans")

@@ -43,6 +43,7 @@ export type PaymentRow = {
   created_at: string;
   expires_at: string;
   confirmed_at: string | null;
+  last_checked_at: string | null;
 };
 
 export type SignalRow = {
@@ -88,10 +89,25 @@ export type Database = {
         Row: PaymentRow;
         Insert: Omit<
           PaymentRow,
-          "id" | "created_at" | "network" | "status" | "tx_hash" | "confirmed_at"
+          | "id"
+          | "created_at"
+          | "network"
+          | "status"
+          | "tx_hash"
+          | "confirmed_at"
+          | "last_checked_at"
         > &
           Partial<
-            Pick<PaymentRow, "id" | "created_at" | "network" | "status" | "tx_hash" | "confirmed_at">
+            Pick<
+              PaymentRow,
+              | "id"
+              | "created_at"
+              | "network"
+              | "status"
+              | "tx_hash"
+              | "confirmed_at"
+              | "last_checked_at"
+            >
           >;
         Update: Partial<PaymentRow>;
         Relationships: [];

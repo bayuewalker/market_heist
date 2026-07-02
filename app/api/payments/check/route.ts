@@ -1,23 +1,27 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { tryConfirmPayment } from "@/lib/payments";
+import { tryConfirmPayment, downgradeExpiredMembers } from "@/lib/payments";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const SWEEP_LIMIT = 500;
+
 /**
  * Fallback sweeper (Vercel Cron). Confirms/expires pending orders that the
- * client poll may have missed. Protected by CRON_SECRET when set; Vercel Cron
- * sends it as a Bearer token.
+ * client poll may have missed and downgrades expired members. Fails closed:
+ * requires CRON_SECRET to be set and presented (Vercel Cron sends it as a
+ * Bearer token).
  */
 async function handle(request: Request) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get("authorization");
-    const header = request.headers.get("x-cron-secret");
-    if (auth !== `Bearer ${secret}` && header !== secret) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: "Cron is not configured." }, { status: 401 });
+  }
+  const auth = request.headers.get("authorization");
+  const header = request.headers.get("x-cron-secret");
+  if (auth !== `Bearer ${secret}` && header !== secret) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const admin = createAdminClient();
@@ -26,7 +30,7 @@ async function handle(request: Request) {
     .select("*")
     .eq("status", "pending")
     .order("created_at", { ascending: true })
-    .limit(100);
+    .limit(SWEEP_LIMIT);
 
   let confirmed = 0;
   let expired = 0;
@@ -36,7 +40,9 @@ async function handle(request: Request) {
     else if (status === "expired") expired++;
   }
 
-  return NextResponse.json({ checked: pending?.length ?? 0, confirmed, expired });
+  const downgraded = await downgradeExpiredMembers();
+
+  return NextResponse.json({ checked: pending?.length ?? 0, confirmed, expired, downgraded });
 }
 
 export async function GET(request: Request) {

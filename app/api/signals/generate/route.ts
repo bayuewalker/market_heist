@@ -33,13 +33,16 @@ export async function POST(request: Request) {
   const timeframe = String(body.timeframe ?? "4H").trim().slice(0, 12) || "4H";
   const notes = String(body.notes ?? "").slice(0, 500);
 
-  // Enforce the plan's daily signal limit (null = unlimited).
+  // Enforce the plan's daily signal limit (null = unlimited). An expired paid
+  // plan is treated as basic even before the cron downgrades it.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan_id")
+    .select("plan_id, plan_expires_at")
     .eq("id", user.id)
     .single();
-  const planId = profile?.plan_id ?? "basic";
+  const expired =
+    !!profile?.plan_expires_at && new Date(profile.plan_expires_at).getTime() < Date.now();
+  const planId = !profile || expired ? "basic" : profile.plan_id;
 
   const { data: plan } = await supabase
     .from("plans")
