@@ -33,12 +33,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSignup && !agreed) {
+      setError("Please accept the Terms and Risk Disclaimer to continue.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setNotice(null);
@@ -125,7 +131,41 @@ export default function AuthForm({ mode }: AuthFormProps) {
           className={inputClass}
           placeholder="••••••••"
         />
+        {!isSignup && (
+          <Link
+            href="/forgot-password"
+            className="self-end text-xs font-medium text-muted transition-colors hover:text-accent-strong"
+          >
+            Forgot password?
+          </Link>
+        )}
       </div>
+
+      {isSignup && (
+        <label className="flex items-start gap-2.5 text-xs text-muted">
+          <input
+            type="checkbox"
+            checked={agreed}
+            onChange={(e) => setAgreed(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-accent"
+          />
+          <span>
+            I&rsquo;m 18+ and agree to the{" "}
+            <Link href="/terms" className="text-accent-strong hover:underline">
+              Terms
+            </Link>
+            ,{" "}
+            <Link href="/privacy" className="text-accent-strong hover:underline">
+              Privacy Policy
+            </Link>
+            , and{" "}
+            <Link href="/risk" className="text-accent-strong hover:underline">
+              Risk Disclaimer
+            </Link>
+            . Signals are educational, not financial advice.
+          </span>
+        </label>
+      )}
 
       {error && (
         <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">

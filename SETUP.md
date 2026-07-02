@@ -34,7 +34,12 @@ In **Authentication → Providers → Email**, decide on email confirmation:
   testing).
 
 In **Authentication → URL Configuration**, add your site + Vercel preview URLs to
-**Redirect URLs** (e.g. `https://your-app.vercel.app/**`).
+**Redirect URLs** (e.g. `https://your-app.vercel.app/**`). This also enables the
+**password reset** flow, which redirects to `/reset-password` (open the reset
+email in the same browser you requested it from).
+
+> Real-time prices for signals come from Binance's public market-data endpoint
+> (no key needed) for crypto pairs; forex/commodity pairs stay directional.
 
 ---
 

@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateSignal } from "@/lib/nvidia";
+import { getMarketContext } from "@/lib/marketdata";
 import type { MarketKind } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MARKETS: MarketKind[] = ["crypto", "forex", "commodity"];
+// Cost guard: at most this many signal requests per user per rolling minute.
+const PER_MINUTE_LIMIT = 5;
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -32,6 +35,20 @@ export async function POST(request: Request) {
   const market = MARKETS.includes(body.market as MarketKind) ? (body.market as MarketKind) : null;
   const timeframe = String(body.timeframe ?? "4H").trim().slice(0, 12) || "4H";
   const notes = String(body.notes ?? "").slice(0, 500);
+
+  // Per-minute rate limit (cost/abuse guard), on top of the daily plan limit.
+  const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
+  const { count: recentCount } = await supabase
+    .from("signals")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .gte("created_at", oneMinuteAgo);
+  if ((recentCount ?? 0) >= PER_MINUTE_LIMIT) {
+    return NextResponse.json(
+      { error: "You're going too fast. Please wait a moment and try again." },
+      { status: 429 },
+    );
+  }
 
   // Enforce the plan's daily signal limit (null = unlimited). An expired paid
   // plan is treated as basic even before the cron downgrades it.
@@ -71,9 +88,11 @@ export async function POST(request: Request) {
     }
   }
 
+  const live = await getMarketContext(pair, market);
+
   let generated;
   try {
-    generated = await generateSignal({ pair, market, timeframe, notes });
+    generated = await generateSignal({ pair, market, timeframe, notes, live });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Signal generation failed." },
