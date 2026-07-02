@@ -1,19 +1,40 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Quote } from "lucide-react";
 import Container from "./ui/Container";
 import SectionHeading from "./ui/SectionHeading";
 import { testimonials } from "@/data/testimonials";
 
+const AUTOPLAY_MS = 6000;
+
 export default function Testimonials() {
   const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
   const total = testimonials.length;
 
-  const goTo = (next: number) => {
-    setIndex(((next % total) + total) % total);
-  };
+  const goTo = useCallback(
+    (next: number) => {
+      setIndex(((next % total) + total) % total);
+    },
+    [total],
+  );
+
+  const prefersReducedMotion = useRef(false);
+  useEffect(() => {
+    prefersReducedMotion.current = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+  }, []);
+
+  useEffect(() => {
+    if (paused || prefersReducedMotion.current) return;
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % total);
+    }, AUTOPLAY_MS);
+    return () => window.clearInterval(timer);
+  }, [paused, total]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "ArrowRight") {
@@ -42,7 +63,11 @@ export default function Testimonials() {
           aria-label="Member testimonials"
           tabIndex={0}
           onKeyDown={handleKeyDown}
-          className="relative mx-auto w-full max-w-2xl rounded-2xl border border-border-subtle bg-surface p-8 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:p-10"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocus={() => setPaused(true)}
+          onBlur={() => setPaused(false)}
+          className="gradient-border relative mx-auto w-full max-w-2xl rounded-2xl border border-border-subtle bg-surface p-8 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent sm:p-10"
         >
           <Quote className="h-8 w-8 text-accent/40" aria-hidden="true" />
 

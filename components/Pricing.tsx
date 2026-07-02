@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Check, HeartHandshake } from "lucide-react";
 import Button from "./ui/Button";
@@ -8,6 +9,7 @@ import Card from "./ui/Card";
 import Container from "./ui/Container";
 import SectionHeading from "./ui/SectionHeading";
 import { pricingPlans, yearlyDiscountPercent } from "@/data/pricing";
+import { asset } from "@/lib/asset";
 
 type Billing = "monthly" | "yearly";
 
@@ -83,9 +85,20 @@ export default function Pricing() {
                 className={`flex h-full flex-col gap-6 ${plan.highlighted ? "lg:py-10" : ""}`}
               >
                 {plan.badge && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-[#06120d]">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-[#06120d] shadow-[0_6px_20px_-6px_rgba(47,226,138,0.9)]">
                     {plan.badge}
                   </span>
+                )}
+
+                {plan.highlighted && (
+                  <Image
+                    src={asset("/assets/visual-square.png")}
+                    alt=""
+                    width={64}
+                    height={64}
+                    aria-hidden="true"
+                    className="animate-floaty pointer-events-none absolute right-5 top-6 h-12 w-12 opacity-90 drop-shadow-[0_0_16px_rgba(47,226,138,0.5)]"
+                  />
                 )}
 
                 <div className="flex flex-col gap-1">
