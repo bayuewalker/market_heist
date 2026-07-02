@@ -63,6 +63,21 @@ export default function FooterCTA() {
               </a>
             ))}
           </nav>
+          <nav aria-label="Legal" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            {[
+              { href: "/terms", label: "Terms" },
+              { href: "/privacy", label: "Privacy" },
+              { href: "/risk", label: "Risk" },
+            ].map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-xs text-muted transition-colors hover:text-foreground"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
           <p className="text-xs text-muted">
             &copy; {new Date().getFullYear()} Market Heist. All rights reserved.
           </p>

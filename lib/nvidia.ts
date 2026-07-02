@@ -8,6 +8,12 @@ export type SignalInput = {
   market?: string | null;
   timeframe?: string;
   notes?: string;
+  live?: {
+    price: number;
+    high24h: number;
+    low24h: number;
+    changePct: number;
+  } | null;
 };
 
 export type GeneratedSignal = {
@@ -65,12 +71,20 @@ export async function generateSignal(input: SignalInput): Promise<GeneratedSigna
     'bias (one of "long", "short", "neutral"), entry (number), target (number), stop (number), ' +
     "confidence (number between 0 and 1), technique (string), rationale (string, max 55 words).";
 
+  const liveBlock = input.live
+    ? `Live market data (use these to anchor your levels):\n` +
+      `- Current price: ${input.live.price}\n` +
+      `- 24h high: ${input.live.high24h}, 24h low: ${input.live.low24h}\n` +
+      `- 24h change: ${input.live.changePct}%\n`
+    : `No live price available — give a directional read and keep levels illustrative.\n`;
+
   const user =
     `Pair: ${input.pair}\n` +
     `Market: ${input.market ?? "unspecified"}\n` +
     `Timeframe: ${input.timeframe ?? "4H"}\n` +
-    `Trader notes: ${input.notes || "none"}\n\n` +
-    "Give one educational signal. Keep the rationale concise and risk-aware.";
+    `Trader notes: ${input.notes || "none"}\n` +
+    liveBlock +
+    "\nGive one educational signal. Entry/target/stop must be consistent with the current price when provided. Keep the rationale concise and risk-aware.";
 
   const response = await fetch(NVIDIA_URL, {
     method: "POST",
