@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, PlayCircle, Sparkles } from "lucide-react";
 import Button from "./ui/Button";
 import Container from "./ui/Container";
 import HeroVisual from "./HeroVisual";
 import BackgroundFX from "./BackgroundFX";
+import VideoModal from "./VideoModal";
 
 const tickerItems = [
   "BTC/USDT",
@@ -25,6 +27,8 @@ const stats = [
 ];
 
 export default function Hero() {
+  const [demoOpen, setDemoOpen] = useState(false);
+
   return (
     <section id="top" className="relative overflow-hidden pt-14 pb-20 sm:pt-20 sm:pb-28">
       <BackgroundFX />
@@ -57,7 +61,13 @@ export default function Hero() {
               Access now
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <Button href="#how-it-works" variant="secondary" size="lg">
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              onClick={() => setDemoOpen(true)}
+              aria-haspopup="dialog"
+            >
               <PlayCircle className="h-4 w-4" aria-hidden="true" />
               See Demo
             </Button>
@@ -100,6 +110,8 @@ export default function Hero() {
           </div>
         </div>
       </div>
+
+      <VideoModal open={demoOpen} onClose={() => setDemoOpen(false)} />
     </section>
   );
 }
