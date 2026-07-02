@@ -37,7 +37,11 @@ function extractJson(content: string): Record<string, unknown> {
   } catch {
     const match = cleaned.match(/\{[\s\S]*\}/);
     if (match) {
-      return JSON.parse(match[0]);
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        throw new Error("Could not parse a signal from the AI response.");
+      }
     }
     throw new Error("Could not parse a signal from the AI response.");
   }

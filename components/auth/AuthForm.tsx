@@ -14,10 +14,20 @@ type AuthFormProps = {
 const inputClass =
   "w-full rounded-lg border border-border-subtle bg-background/60 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted/70 transition-colors focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/30";
 
+/**
+ * Only allow redirects to internal, single-slash paths to avoid open-redirect
+ * navigation (e.g. "//evil.example" or "/\\evil.example").
+ */
+function safeRedirect(target: string | null): string {
+  if (!target || !target.startsWith("/")) return "/dashboard";
+  if (target.startsWith("//") || target.startsWith("/\\")) return "/dashboard";
+  return target;
+}
+
 export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+  const redirectTo = safeRedirect(searchParams.get("redirect"));
 
   const isSignup = mode === "signup";
   const [fullName, setFullName] = useState("");
