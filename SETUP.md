@@ -19,6 +19,7 @@ migrations **in order**:
 4. [`supabase/migrations/0004_harden_payments.sql`](./supabase/migrations/0004_harden_payments.sql)
 5. [`supabase/migrations/0005_admin_role.sql`](./supabase/migrations/0005_admin_role.sql)
 6. [`supabase/migrations/0006_fix_admin_review.sql`](./supabase/migrations/0006_fix_admin_review.sql)
+7. [`supabase/migrations/0007_trend_updates.sql`](./supabase/migrations/0007_trend_updates.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -58,7 +59,8 @@ In the Vercel project → **Settings → Environment Variables**, add:
 | `NVIDIA_MODEL` | `meta/llama-3.3-70b-instruct` | Optional (default) |
 | `PAYMENT_TRON_ADDRESS` | your TRON **USDT (TRC20)** wallet address | Where members send USDT |
 | `TRONGRID_API_KEY` | TronGrid API key | Optional (raises rate limits) |
-| `CRON_SECRET` | long random string | Recommended — protects the payment cron |
+| `CRON_SECRET` | long random string | Recommended — protects the payment + trend-update crons |
+| `NEXT_PUBLIC_MENTORING_LINK` | your Telegram/Zoom/Discord link | Optional — "Join session" target on `/dashboard/mentoring` |
 
 Find the Supabase keys in **Project Settings → API**. After saving, **redeploy**.
 
@@ -95,6 +97,19 @@ update public.profiles set role = 'admin' where email = 'you@example.com';
 
 After that, admins can promote/demote other users from `/admin/users` (you
 can't demote yourself, to avoid locking everyone out).
+
+### Daily trend updates & mentoring
+
+`/dashboard/trends` shows a short AI-written daily briefing per market
+(crypto/forex/commodity). A Vercel Cron (`/api/trends/generate`, daily at
+06:05 UTC — see `vercel.json`) generates them; admins can also trigger a
+manual "Generate today's updates" refresh from the page. Requires
+`CRON_SECRET` (or an admin session) the same way the payment cron does.
+
+`/dashboard/mentoring` is a static weekly schedule (`data/mentoring.ts`) —
+Basic unlocks the Friday session, Pro/Elite unlock every weekday. Edit that
+file to adjust days/topics, and set `NEXT_PUBLIC_MENTORING_LINK` to your real
+session link.
 
 ---
 

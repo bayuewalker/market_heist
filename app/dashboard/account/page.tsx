@@ -4,6 +4,9 @@ import { Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import Button from "@/components/ui/Button";
 import LogoutButton from "@/components/dashboard/LogoutButton";
+import ProfileNameForm from "@/components/dashboard/ProfileNameForm";
+import ChangePasswordForm from "@/components/dashboard/ChangePasswordForm";
+import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
 
 export const dynamic = "force-dynamic";
 
@@ -46,19 +49,19 @@ export default async function AccountPage() {
 
       <section className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Profile</h2>
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs text-muted">Name</dt>
-            <dd className="text-sm text-foreground">{profile?.full_name?.trim() || "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-muted">Email</dt>
-            <dd className="text-sm text-foreground">{profile?.email || user.email}</dd>
-          </div>
-        </dl>
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-muted">Email</p>
+          <p className="text-sm text-foreground">{profile?.email || user.email}</p>
+        </div>
+        <ProfileNameForm userId={user.id} initialName={profile?.full_name?.trim() ?? ""} />
         <div className="border-t border-border-subtle pt-4 md:hidden">
           <LogoutButton />
         </div>
+      </section>
+
+      <section className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Password</h2>
+        <ChangePasswordForm />
       </section>
 
       <section className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-6">
@@ -93,6 +96,11 @@ export default async function AccountPage() {
           </Link>
           .
         </p>
+      </section>
+
+      <section className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Danger zone</h2>
+        <DeleteAccountSection />
       </section>
     </div>
   );

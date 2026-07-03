@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, LayoutDashboard, Radar, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import {
+  CalendarClock,
+  CreditCard,
+  LayoutDashboard,
+  Radar,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  UserRound,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Logo from "@/components/Logo";
 import LogoutButton from "./LogoutButton";
@@ -13,6 +22,8 @@ const items: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/signals", label: "Signals", icon: Radar },
   { href: "/dashboard/request", label: "Request signal", icon: Sparkles },
+  { href: "/dashboard/trends", label: "Trends", icon: TrendingUp },
+  { href: "/dashboard/mentoring", label: "Mentoring", icon: CalendarClock },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/account", label: "Account", icon: UserRound },
 ];

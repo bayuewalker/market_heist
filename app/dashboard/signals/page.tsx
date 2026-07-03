@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import SignalCard from "@/components/dashboard/SignalCard";
+import SignalActions from "@/components/dashboard/SignalActions";
 import Button from "@/components/ui/Button";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,7 @@ export default async function SignalsPage() {
       {signals && signals.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {signals.map((signal) => (
-            <SignalCard key={signal.id} signal={signal} />
+            <SignalCard key={signal.id} signal={signal} actions={<SignalActions signal={signal} />} />
           ))}
         </div>
       ) : (

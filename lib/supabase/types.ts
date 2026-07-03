@@ -66,6 +66,15 @@ export type SignalRow = {
   created_at: string;
 };
 
+export type TrendUpdateRow = {
+  id: string;
+  market: MarketKind;
+  for_date: string;
+  headline: string;
+  summary: string;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -113,6 +122,13 @@ export type Database = {
             >
           >;
         Update: Partial<PaymentRow>;
+        Relationships: [];
+      };
+      trend_updates: {
+        Row: TrendUpdateRow;
+        Insert: Omit<TrendUpdateRow, "id" | "created_at" | "for_date"> &
+          Partial<Pick<TrendUpdateRow, "id" | "created_at" | "for_date">>;
+        Update: Partial<TrendUpdateRow>;
         Relationships: [];
       };
     };

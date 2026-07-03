@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import type { SignalRow } from "@/lib/supabase/types";
 
@@ -25,13 +26,23 @@ function fmtDate(iso: string) {
   }).format(new Date(iso));
 }
 
-export default function SignalCard({ signal }: { signal: SignalRow }) {
+export default function SignalCard({
+  signal,
+  actions,
+}: {
+  signal: SignalRow;
+  actions?: ReactNode;
+}) {
   const bias = biasStyles[signal.bias];
   const confidencePct =
     signal.confidence === null ? null : Math.round(signal.confidence * 100);
 
   return (
-    <article className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-5 transition-colors hover:border-accent/30">
+    <article
+      className={`flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-5 transition-colors hover:border-accent/30 ${
+        signal.status === "closed" ? "opacity-70" : ""
+      }`}
+    >
       <header className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-foreground">{signal.pair}</h3>
@@ -40,12 +51,19 @@ export default function SignalCard({ signal }: { signal: SignalRow }) {
             {fmtDate(signal.created_at)} UTC
           </p>
         </div>
-        <span
-          className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${bias.className}`}
-        >
-          <bias.Icon className="h-3.5 w-3.5" aria-hidden="true" />
-          {bias.label}
-        </span>
+        <div className="flex items-center gap-2">
+          {signal.status === "closed" && (
+            <span className="rounded-full border border-border-subtle px-2 py-1 text-xs font-medium text-muted">
+              Closed
+            </span>
+          )}
+          <span
+            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${bias.className}`}
+          >
+            <bias.Icon className="h-3.5 w-3.5" aria-hidden="true" />
+            {bias.label}
+          </span>
+        </div>
       </header>
 
       <div className="grid grid-cols-3 gap-2">
@@ -82,6 +100,8 @@ export default function SignalCard({ signal }: { signal: SignalRow }) {
           {signal.technique}
         </span>
       )}
+
+      {actions && <div className="flex items-center gap-2 border-t border-border-subtle pt-3">{actions}</div>}
     </article>
   );
 }
