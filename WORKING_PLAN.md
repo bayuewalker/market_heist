@@ -74,7 +74,7 @@ pattern).
 
 | New table | Purpose | Key columns | RLS intent |
 |---|---|---|---|
-| `brokers` | Partner metadata + referral base URL | `id, name, slug, referral_base_url, markets[], active, sort` | Public read (active only) |
+| `brokers` | Partner metadata + referral base URL | `id, name, slug, referral_base_url, markets text[], active, sort` | Public read (active only) |
 | `broker_accounts` | User broker UID + verification | `id, user_id, broker_id, uid, status, note, verified_at, verified_by` | Read own; admin read/update all |
 | `commission_imports` | Import sessions by broker/period | `id, broker_id, period, source(csv/api/manual), row_count, imported_by, created_at` | Admin only |
 | `commission_rows` | Raw matched commission/volume/fees | `id, import_id, broker_id, uid, volume, fees, backend_commission, matched_user_id, for_period` | Admin only |
@@ -99,8 +99,8 @@ Blueprint mentions `ai_chat_sessions` (§14) — add with the GPT Mentor work (H
 ## 4. Phased milestones
 
 Milestones continue the existing `M1…M3` naming (see git log). Each milestone =
-one PR to `claude/working-plan-qy20ca`, security-reviewed, with migrations that
-run cleanly on top of `0007`.
+one focused PR, security-reviewed, with migrations that run cleanly on top of
+the latest existing migration.
 
 ### M4 — Broker Station + UID verification (P0) — *blueprint §6, §9, items A/B*
 - Migration `0008`: `brokers`, `broker_accounts` (+ UID status enum from §9).
@@ -150,7 +150,7 @@ run cleanly on top of `0007`.
 2. **RLS-first** — new tables deny by default; member reads own; admin via `is_admin()`; privileged writes via service role only (mirror `0006` trigger pattern for immutable/privileged columns).
 3. **Eligibility gate** — rewards & leaderboard require `verified` broker UID + active membership (respect `plan_expires_at`).
 4. **Migrations** — sequential, idempotent (`if not exists` / `drop policy if exists`), safe to re-run; document in `SETUP.md`.
-5. **Security review** — run `/security-review` on each PR touching auth, RLS, payments, rewards, or admin.
+5. **Security review** — perform a security review on each PR touching auth, RLS, payments, rewards, or admin: verify RLS policies deny by default, service-role boundaries hold, and privileged columns stay guarded.
 6. **Framework docs** — consult `node_modules/next/dist/docs/` before route/handler/config changes (per `AGENTS.md`).
 
 ---
