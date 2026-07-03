@@ -4,10 +4,10 @@
 // its own <html>/<body> and can't rely on the app's Tailwind build having
 // been applied to this boundary — hence inline styles here.
 export default function GlobalError({
-  unstable_retry,
+  reset,
 }: {
   error: Error & { digest?: string };
-  unstable_retry: () => void;
+  reset: () => void;
 }) {
   return (
     <html lang="en">
@@ -32,7 +32,7 @@ export default function GlobalError({
           A critical error occurred. Please try again.
         </p>
         <button
-          onClick={() => unstable_retry()}
+          onClick={() => reset()}
           style={{
             borderRadius: 9999,
             padding: "0.625rem 1.5rem",

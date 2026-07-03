@@ -18,7 +18,7 @@ export default async function AdminOverview() {
     { count: paidUsers },
     { count: totalSignals },
     { count: signalsToday },
-    { data: confirmedPayments },
+    { data: revenueTotal },
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }),
     supabase
@@ -31,10 +31,11 @@ export default async function AdminOverview() {
       .from("signals")
       .select("id", { count: "exact", head: true })
       .gte("created_at", startOfDay.toISOString()),
-    supabase.from("payments").select("amount_usdt").eq("status", "confirmed"),
+    // Server-side SUM aggregate instead of fetching every confirmed payment row.
+    supabase.rpc("admin_confirmed_revenue"),
   ]);
 
-  const revenue = (confirmedPayments ?? []).reduce((sum, p) => sum + Number(p.amount_usdt), 0);
+  const revenue = Number(revenueTotal ?? 0);
 
   const stats = [
     { label: "Total users", value: String(totalUsers ?? 0), icon: Users },

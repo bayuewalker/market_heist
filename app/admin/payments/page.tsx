@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
+import type { PaymentRow } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
 const PAYMENT_LIMIT = 100;
+const PAYMENT_COLUMNS = "id, user_id, plan_id, period, amount_usdt, status, tx_hash, created_at";
+type AdminPaymentRow = Pick<
+  PaymentRow,
+  "id" | "user_id" | "plan_id" | "period" | "amount_usdt" | "status" | "tx_hash" | "created_at"
+>;
 
 function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -14,6 +20,10 @@ function fmtDate(iso: string) {
   }).format(new Date(iso));
 }
 
+function fmtUsd(n: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+}
+
 const statusColor: Record<string, string> = {
   confirmed: "border-accent/40 bg-accent/10 text-accent-strong",
   pending: "border-border-subtle text-muted",
@@ -23,11 +33,15 @@ const statusColor: Record<string, string> = {
 export default async function AdminPaymentsPage() {
   const supabase = await createClient();
 
-  const { data: payments } = await supabase
-    .from("payments")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(PAYMENT_LIMIT);
+  const [{ data: payments }, { data: revenue }] = await Promise.all([
+    supabase
+      .from("payments")
+      .select(PAYMENT_COLUMNS)
+      .order("created_at", { ascending: false })
+      .limit(PAYMENT_LIMIT)
+      .overrideTypes<AdminPaymentRow[], { merge: false }>(),
+    supabase.rpc("admin_confirmed_revenue"),
+  ]);
 
   const userIds = [...new Set((payments ?? []).map((p) => p.user_id))];
   const { data: profiles } =
@@ -35,10 +49,6 @@ export default async function AdminPaymentsPage() {
       ? await supabase.from("profiles").select("id, email").in("id", userIds)
       : { data: [] };
   const emailById = new Map((profiles ?? []).map((p) => [p.id, p.email]));
-
-  const confirmedTotal = (payments ?? [])
-    .filter((p) => p.status === "confirmed")
-    .reduce((sum, p) => sum + Number(p.amount_usdt), 0);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -48,7 +58,8 @@ export default async function AdminPaymentsPage() {
           <p className="text-sm text-muted">Most recent {payments?.length ?? 0} orders.</p>
         </div>
         <p className="text-sm text-muted">
-          Confirmed (this page): <span className="font-semibold text-accent-strong">${confirmedTotal.toFixed(2)}</span>
+          Total confirmed revenue:{" "}
+          <span className="font-semibold text-accent-strong">{fmtUsd(Number(revenue ?? 0))}</span>
         </p>
       </header>
 

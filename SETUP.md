@@ -18,6 +18,7 @@ migrations **in order**:
 3. [`supabase/migrations/0003_payments.sql`](./supabase/migrations/0003_payments.sql)
 4. [`supabase/migrations/0004_harden_payments.sql`](./supabase/migrations/0004_harden_payments.sql)
 5. [`supabase/migrations/0005_admin_role.sql`](./supabase/migrations/0005_admin_role.sql)
+6. [`supabase/migrations/0006_fix_admin_review.sql`](./supabase/migrations/0006_fix_admin_review.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a

@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import type { SignalRow } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
 
 const SIGNAL_LIMIT = 100;
+const SIGNAL_COLUMNS = "id, user_id, pair, bias, confidence, status, created_at";
+type AdminSignalRow = Pick<SignalRow, "id" | "user_id" | "pair" | "bias" | "confidence" | "status" | "created_at">;
 
 function fmtDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -25,9 +28,10 @@ export default async function AdminSignalsPage() {
 
   const { data: signals } = await supabase
     .from("signals")
-    .select("*")
+    .select(SIGNAL_COLUMNS)
     .order("created_at", { ascending: false })
-    .limit(SIGNAL_LIMIT);
+    .limit(SIGNAL_LIMIT)
+    .overrideTypes<AdminSignalRow[], { merge: false }>();
 
   const userIds = [...new Set((signals ?? []).map((s) => s.user_id))];
   const { data: profiles } =

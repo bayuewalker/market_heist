@@ -6,10 +6,10 @@ import Button from "@/components/ui/Button";
 
 export default function ErrorPage({
   error,
-  unstable_retry,
+  reset,
 }: {
   error: Error & { digest?: string };
-  unstable_retry: () => void;
+  reset: () => void;
 }) {
   useEffect(() => {
     console.error(error);
@@ -25,7 +25,7 @@ export default function ErrorPage({
         An unexpected error occurred. Try again, or head back to the dashboard.
       </p>
       <div className="flex gap-3">
-        <Button onClick={() => unstable_retry()}>Try again</Button>
+        <Button onClick={() => reset()}>Try again</Button>
         <Button href="/dashboard" variant="secondary">
           Go to dashboard
         </Button>
