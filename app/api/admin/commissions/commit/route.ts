@@ -77,11 +77,17 @@ export async function POST(request: Request) {
         for_period: period,
       })),
     )
-    .select();
-  if (rowsErr || !insertedRows) {
+    .select("id");
+  if (rowsErr || !insertedRows || insertedRows.length !== matched.length) {
     return NextResponse.json({ error: rowsErr?.message ?? "Could not store commission rows." }, { status: 500 });
   }
 
+  // insertedRows[i] corresponds to matched[i]: this is a single INSERT ...
+  // VALUES (...), (...) RETURNING id built from `matched.map(...)` above, and
+  // Postgres preserves VALUES-list order in RETURNING for a plain multi-row
+  // insert (no ORDER BY/trigger reordering involved) — the length check above
+  // is a defensive guard against a partial-insert edge case, not evidence
+  // this ordering assumption is otherwise unsafe.
   const allocations = matched.flatMap((r, i) =>
     computeRewardAllocations({
       matchedUserId: r.matched_user_id,

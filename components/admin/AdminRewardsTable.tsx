@@ -123,7 +123,7 @@ export default function AdminRewardsTable({
                   {r.user_id ? (emailById.get(r.user_id) ?? r.user_id.slice(0, 8)) : "House"}
                 </td>
                 <td className="px-2 py-3 capitalize text-foreground">{r.allocation_type}</td>
-                <td className="px-2 py-3 font-medium tabular-nums text-foreground">{fmtUsd(r.amount)}</td>
+                <td className="px-2 py-3 font-medium tabular-nums text-foreground">{fmtUsd(Number(r.amount))}</td>
                 <td className="px-2 py-3 text-muted">{r.period ?? "—"}</td>
                 <td className="px-2 py-3">
                   <span className={`rounded-full border px-2 py-0.5 text-xs font-medium capitalize ${statusColor[r.status]}`}>

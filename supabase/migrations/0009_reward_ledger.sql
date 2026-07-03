@@ -106,6 +106,41 @@ create policy "admin read all reward ledger"
   using (public.is_admin());
 
 -- ---------------------------------------------------------------------------
+-- Guard trigger: enforce append-only in the database, not just by
+-- convention. The financial identity of a ledger row (who/what/how much/
+-- which commission row/which period) can never change after insert — a
+-- correction is a new row. This applies to EVERY updater, including the
+-- service role, since the approve/mark-paid routes only ever need to touch
+-- status/approved_*/paid_* and there is no legitimate reason for anything to
+-- rewrite an amount in place.
+-- ---------------------------------------------------------------------------
+create or replace function public.guard_reward_ledger_immutable_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.user_id is distinct from old.user_id
+     or new.source_type is distinct from old.source_type
+     or new.allocation_type is distinct from old.allocation_type
+     or new.amount is distinct from old.amount
+     or new.commission_row_id is distinct from old.commission_row_id
+     or new.period is distinct from old.period
+  then
+    raise exception 'reward_ledger rows are append-only: amount/allocation fields cannot be changed. Insert a correcting row instead.';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists reward_ledger_guard_immutable_fields on public.reward_ledger;
+create trigger reward_ledger_guard_immutable_fields
+  before update on public.reward_ledger
+  for each row execute function public.guard_reward_ledger_immutable_fields();
+
+-- ---------------------------------------------------------------------------
 -- audit_logs: admin/system action history (pulled forward from M11)
 -- ---------------------------------------------------------------------------
 create table if not exists public.audit_logs (

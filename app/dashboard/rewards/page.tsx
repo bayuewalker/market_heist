@@ -41,7 +41,9 @@ export default async function RewardsPage() {
     .order("created_at", { ascending: false });
 
   const totals: Record<RewardLedgerStatus, number> = { estimated: 0, pending: 0, approved: 0, paid: 0 };
-  for (const r of rewards ?? []) totals[r.status] += r.amount;
+  // amount is a Postgres numeric column — Supabase/PostgREST can return it as
+  // a string, so coerce before arithmetic to avoid string concatenation.
+  for (const r of rewards ?? []) totals[r.status] += Number(r.amount);
 
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
@@ -76,7 +78,7 @@ export default async function RewardsPage() {
             {(rewards ?? []).map((r) => (
               <tr key={r.id} className="border-b border-border-subtle text-sm last:border-0">
                 <td className="px-2 py-3 text-muted">{r.period ?? "—"}</td>
-                <td className="px-2 py-3 font-semibold tabular-nums text-foreground">{fmtUsd(r.amount)}</td>
+                <td className="px-2 py-3 font-semibold tabular-nums text-foreground">{fmtUsd(Number(r.amount))}</td>
                 <td className="px-2 py-3">
                   <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${statusColor[r.status]}`}>
                     {STATUS_LABEL[r.status]}
