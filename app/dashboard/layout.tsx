@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("plan_id")
+    .select("plan_id, role")
     .eq("id", user.id)
     .single();
 
@@ -30,7 +30,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
-      <DashboardNav email={user.email ?? ""} planName={plan?.name ?? "Market Heister Basic"} />
+      <DashboardNav
+        email={user.email ?? ""}
+        planName={plan?.name ?? "Market Heister Basic"}
+        isAdmin={profile?.role === "admin"}
+      />
       <main className="flex-1 px-5 py-8 sm:px-8">{children}</main>
     </div>
   );

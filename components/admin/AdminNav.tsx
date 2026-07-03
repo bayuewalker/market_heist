@@ -2,30 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CreditCard, LayoutDashboard, Radar, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { Activity, LayoutDashboard, Radar, ShieldCheck, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Logo from "@/components/Logo";
-import LogoutButton from "./LogoutButton";
+import LogoutButton from "@/components/dashboard/LogoutButton";
 
 type NavItem = { href: string; label: string; icon: LucideIcon };
 
 const items: NavItem[] = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/signals", label: "Signals", icon: Radar },
-  { href: "/dashboard/request", label: "Request signal", icon: Sparkles },
-  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
-  { href: "/dashboard/account", label: "Account", icon: UserRound },
+  { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/signals", label: "Signals", icon: Radar },
+  { href: "/admin/payments", label: "Payments", icon: Wallet },
 ];
 
-export default function DashboardNav({
-  email,
-  planName,
-  isAdmin,
-}: {
-  email: string;
-  planName: string;
-  isAdmin?: boolean;
-}) {
+export default function AdminNav({ email }: { email: string }) {
   const pathname = usePathname();
 
   return (
@@ -34,12 +25,14 @@ export default function DashboardNav({
         <Logo />
       </Link>
 
-      <nav aria-label="Dashboard" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+      <div className="hidden items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-medium text-accent-strong md:flex">
+        <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+        Admin mode
+      </div>
+
+      <nav aria-label="Admin" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
         {items.map((item) => {
-          const active =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+          const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
           const Icon = item.icon;
           return (
             <Link
@@ -57,21 +50,19 @@ export default function DashboardNav({
             </Link>
           );
         })}
-        {isAdmin && (
-          <Link
-            href="/admin"
-            className="inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-accent-strong transition-colors hover:bg-accent/10"
-          >
-            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            Admin panel
-          </Link>
-        )}
+        <Link
+          href="/dashboard"
+          className="mt-1 inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground"
+        >
+          <Activity className="h-4 w-4" aria-hidden="true" />
+          Back to dashboard
+        </Link>
       </nav>
 
       <div className="mt-auto hidden flex-col gap-3 border-t border-border-subtle pt-4 md:flex">
         <div className="px-3">
           <p className="truncate text-sm font-medium text-foreground">{email}</p>
-          <p className="text-xs text-muted">{planName}</p>
+          <p className="text-xs text-muted">Admin</p>
         </div>
         <LogoutButton />
       </div>
