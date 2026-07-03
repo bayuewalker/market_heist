@@ -34,7 +34,7 @@ Recorded here so future work doesn't re-litigate them.
 
 | Decision | Status under V1.1 |
 |---|---|
-| **Keep Supabase email/password as primary auth.** Telegram Login is additive (M13below), linking a `telegram_id` to the existing `profiles` row — not a login replacement. | **Stands.** V1.1 §25 lists auth as "Supabase Auth / Clerk **+** Telegram Login" (additive, not exclusive), consistent with the existing decision. If the founder wants Telegram Login pulled forward from M13, say so explicitly — noted as a flag, not auto-applied. |
+| **Keep Supabase email/password as primary auth.** Telegram Login is additive (M13 below), linking a `telegram_id` to the existing `profiles` row — not a login replacement. | **Stands.** V1.1 §25 lists auth as "Supabase Auth / Clerk **+** Telegram Login" (additive, not exclusive), consistent with the existing decision. If the founder wants Telegram Login pulled forward from M13, say so explicitly — noted as a flag, not auto-applied. |
 | **Run cash Reward Ledger (business engine) and Points/Rank/Missions (retention engine) in parallel**, sharing the M4 verified-UID eligibility gate, never converting into each other. | **Stands and is now formalized in V1.1** — §7.1's Backend Pool Allocation (cash) and §8.3's Mission Engine (points) are explicitly separate engines in the V1.1 architecture (§8). |
 
 ---
