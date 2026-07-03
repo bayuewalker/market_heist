@@ -17,6 +17,7 @@ migrations **in order**:
 2. [`supabase/migrations/0002_restrict_plan_changes.sql`](./supabase/migrations/0002_restrict_plan_changes.sql)
 3. [`supabase/migrations/0003_payments.sql`](./supabase/migrations/0003_payments.sql)
 4. [`supabase/migrations/0004_harden_payments.sql`](./supabase/migrations/0004_harden_payments.sql)
+5. [`supabase/migrations/0005_admin_role.sql`](./supabase/migrations/0005_admin_role.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -72,9 +73,27 @@ gateway holds funds — USDT lands directly in your wallet.
   an hourly Vercel Cron (`/api/payments/check`, see `vercel.json`) sweeps any it
   missed. Set `CRON_SECRET` so Vercel Cron can authenticate.
 
-> Only the **anon** key goes in the browser. The `service_role` key is not used by
-> this app and must never be exposed. Signals are inserted as the logged-in user,
-> protected by RLS.
+> Only the **anon** key goes in the browser. `SUPABASE_SERVICE_ROLE_KEY` is used
+> **server-only** (payment confirmation, admin actions) and must never be
+> exposed to the client. Signals are inserted as the logged-in user, protected
+> by RLS.
+
+### Admin panel
+
+`/admin` (linked from the dashboard sidebar for admins) lets you view overview
+stats and manage every user's plan/role, and browse all signals and payments.
+It's gated by `profiles.role = 'admin'`, enforced by both a server-side check
+and RLS (`is_admin()` in `0005_admin_role.sql`).
+
+No one is an admin by default. Promote your first admin directly in the SQL
+Editor:
+
+```sql
+update public.profiles set role = 'admin' where email = 'you@example.com';
+```
+
+After that, admins can promote/demote other users from `/admin/users` (you
+can't demote yourself, to avoid locking everyone out).
 
 ---
 
@@ -111,3 +130,24 @@ npm run dev
 
 `.env.local` is gitignored. Without valid Supabase/NVIDIA values the marketing
 pages still render, but auth and signal generation require real keys.
+
+---
+
+## Ops & monitoring
+
+- **Errors**: `app/error.tsx` and `app/global-error.tsx` give a graceful
+  fallback UI instead of a blank crash screen; unhandled errors are still
+  logged to the Vercel Functions/Runtime logs by default (**Vercel →
+  Observability**) with no extra setup.
+- **Deeper error tracking (optional)**: for stack traces, alerting, and
+  release tracking, add [Sentry](https://sentry.io) (`@sentry/nextjs`) or a
+  similar tool. Not wired up yet — add it when you have a DSN.
+- **Uptime**: point an external uptime monitor (e.g. UptimeRobot, Better
+  Uptime) at `https://<your-domain>/` to get alerted if the site goes down.
+- **Key rotation**: if any secret (`SUPABASE_SERVICE_ROLE_KEY`, `NVIDIA_API_KEY`,
+  `CRON_SECRET`, Supabase access tokens used for admin setup) is ever shared
+  outside Vercel's environment variables (chat, screenshots, etc.), rotate it
+  immediately in Supabase/NVIDIA and update Vercel.
+- **Backups**: Supabase takes automatic daily backups on paid plans; on the
+  free tier, periodically export critical tables (`profiles`, `payments`,
+  `signals`) via the SQL Editor or `pg_dump` if you need your own copy.

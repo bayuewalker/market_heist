@@ -18,12 +18,15 @@ export type PlanRow = {
   sort: number;
 };
 
+export type UserRole = "member" | "admin";
+
 export type ProfileRow = {
   id: string;
   email: string | null;
   full_name: string | null;
   plan_id: string;
   plan_expires_at: string | null;
+  role: UserRole;
   created_at: string;
 };
 
