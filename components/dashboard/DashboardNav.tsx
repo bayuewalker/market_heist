@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   CalendarClock,
   CreditCard,
+  Landmark,
   LayoutDashboard,
   Radar,
   ShieldCheck,
@@ -20,6 +21,7 @@ type NavItem = { href: string; label: string; icon: LucideIcon };
 
 const items: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
+  { href: "/dashboard/broker", label: "Broker Station", icon: Landmark },
   { href: "/dashboard/signals", label: "Signals", icon: Radar },
   { href: "/dashboard/request", label: "Request signal", icon: Sparkles },
   { href: "/dashboard/trends", label: "Trends", icon: TrendingUp },
