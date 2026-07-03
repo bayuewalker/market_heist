@@ -47,6 +47,12 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
     if (update.status === "verified") {
       update.verified_at = new Date().toISOString();
       update.verified_by = user.id;
+    } else if (update.status !== "inactive") {
+      // "inactive" means verified-but-dormant (blueprint §9) — keep the
+      // verification record. Every other non-verified status means the
+      // account never was (or no longer is) verified, so clear it.
+      update.verified_at = null;
+      update.verified_by = null;
     }
   }
 

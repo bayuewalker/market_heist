@@ -67,7 +67,13 @@ create policy "admin read all broker accounts"
 drop policy if exists "insert own broker account" on public.broker_accounts;
 create policy "insert own broker account"
   on public.broker_accounts for insert
-  with check (auth.uid() = user_id and status = 'submitted');
+  with check (
+    auth.uid() = user_id
+    and status = 'submitted'
+    and note is null
+    and verified_at is null
+    and verified_by is null
+  );
 
 drop policy if exists "update own broker account" on public.broker_accounts;
 create policy "update own broker account"
@@ -82,12 +88,15 @@ create policy "admin update all broker accounts"
   with check (public.is_admin());
 
 -- ---------------------------------------------------------------------------
--- Guard trigger: verification status is admin/service-only. A member may only
--- edit their own row (e.g. fix a typo'd UID) while it's still 'submitted', or
--- resubmit after a 'rejected' verdict (which flips status back to
--- 'submitted'). Once it's under_review/verified/duplicate/inactive the row is
--- locked to the member. Mirrors the profiles privileged-field guard in
--- 0006_fix_admin_review.sql.
+-- Guard trigger: verification status and admin-owned fields are
+-- admin/service-only. A member may only edit their own row's `uid` (e.g. fix
+-- a typo) while it's still 'submitted', or resubmit after a 'rejected'
+-- verdict (which flips status back to 'submitted'). Once it's
+-- under_review/verified/duplicate/inactive the row is locked to the member.
+-- `note`, `broker_id`, and `created_at` are never member-editable — `note` is
+-- the admin's review reason, `broker_id` identifies the row (a member wanting
+-- a different broker submits a new row), and `created_at` is an audit field.
+-- Mirrors the profiles privileged-field guard in 0006_fix_admin_review.sql.
 -- ---------------------------------------------------------------------------
 create or replace function public.guard_broker_account_privileged_fields()
 returns trigger
@@ -110,6 +119,9 @@ begin
 
   if new.verified_at is distinct from old.verified_at
      or new.verified_by is distinct from old.verified_by
+     or new.note is distinct from old.note
+     or new.broker_id is distinct from old.broker_id
+     or new.created_at is distinct from old.created_at
   then
     raise exception 'Only an admin can change broker account status.';
   end if;
