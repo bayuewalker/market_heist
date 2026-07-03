@@ -20,6 +20,7 @@ migrations **in order**:
 5. [`supabase/migrations/0005_admin_role.sql`](./supabase/migrations/0005_admin_role.sql)
 6. [`supabase/migrations/0006_fix_admin_review.sql`](./supabase/migrations/0006_fix_admin_review.sql)
 7. [`supabase/migrations/0007_trend_updates.sql`](./supabase/migrations/0007_trend_updates.sql)
+8. [`supabase/migrations/0008_broker_station.sql`](./supabase/migrations/0008_broker_station.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -110,6 +111,22 @@ manual "Generate today's updates" refresh from the page. Requires
 Basic unlocks the Friday session, Pro/Elite unlock every weekday. Edit that
 file to adjust days/topics, and set `NEXT_PUBLIC_MENTORING_LINK` to your real
 session link.
+
+### Broker Station & UID verification
+
+`/dashboard/broker` lists the partner brokers seeded by `0008_broker_station.sql`
+(Bitget, KuCoin, BingX). A member opens the referral link, then submits their
+broker UID; the row starts as `submitted`. Update the placeholder
+`referral_base_url` values in that migration (or via the SQL Editor) to your
+real partner referral links before launch.
+
+Admins review submissions on `/admin/broker-accounts` and move each account
+through `under_review` -> `verified` / `rejected` / `duplicate` / `inactive`.
+Members can freely edit their UID while `submitted`, and resubmitting after a
+`rejected` verdict flips the status back to `submitted`; every other
+transition is admin-only (enforced by a DB trigger, not just the UI). A
+verified broker account is the eligibility gate for the reward engine and
+leaderboard (built in a later milestone).
 
 ---
 

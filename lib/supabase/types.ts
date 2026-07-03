@@ -75,6 +75,36 @@ export type TrendUpdateRow = {
   created_at: string;
 };
 
+export type BrokerRow = {
+  id: string;
+  name: string;
+  referral_base_url: string;
+  markets: MarketKind[];
+  active: boolean;
+  sort: number;
+};
+
+export type BrokerAccountStatus =
+  | "submitted"
+  | "under_review"
+  | "verified"
+  | "rejected"
+  | "duplicate"
+  | "inactive";
+
+export type BrokerAccountRow = {
+  id: string;
+  user_id: string;
+  broker_id: string;
+  uid: string;
+  status: BrokerAccountStatus;
+  note: string | null;
+  verified_at: string | null;
+  verified_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -129,6 +159,27 @@ export type Database = {
         Insert: Omit<TrendUpdateRow, "id" | "created_at" | "for_date"> &
           Partial<Pick<TrendUpdateRow, "id" | "created_at" | "for_date">>;
         Update: Partial<TrendUpdateRow>;
+        Relationships: [];
+      };
+      brokers: {
+        Row: BrokerRow;
+        Insert: Partial<BrokerRow> & { id: string; name: string; referral_base_url: string };
+        Update: Partial<BrokerRow>;
+        Relationships: [];
+      };
+      broker_accounts: {
+        Row: BrokerAccountRow;
+        Insert: Omit<
+          BrokerAccountRow,
+          "id" | "status" | "note" | "verified_at" | "verified_by" | "created_at" | "updated_at"
+        > &
+          Partial<
+            Pick<
+              BrokerAccountRow,
+              "id" | "status" | "note" | "verified_at" | "verified_by" | "created_at" | "updated_at"
+            >
+          >;
+        Update: Partial<BrokerAccountRow>;
         Relationships: [];
       };
     };

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, LayoutDashboard, Radar, ShieldCheck, Users, Wallet } from "lucide-react";
+import { Activity, Landmark, LayoutDashboard, Radar, ShieldCheck, Users, Wallet } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Logo from "@/components/Logo";
 import LogoutButton from "@/components/dashboard/LogoutButton";
@@ -12,6 +12,7 @@ type NavItem = { href: string; label: string; icon: LucideIcon };
 const items: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/broker-accounts", label: "Broker accounts", icon: Landmark },
   { href: "/admin/signals", label: "Signals", icon: Radar },
   { href: "/admin/payments", label: "Payments", icon: Wallet },
 ];
