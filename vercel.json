@@ -3,6 +3,10 @@
     {
       "path": "/api/payments/check",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/trends/generate",
+      "schedule": "5 6 * * *"
     }
   ]
 }
