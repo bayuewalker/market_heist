@@ -105,6 +105,59 @@ export type BrokerAccountRow = {
   updated_at: string;
 };
 
+export type CommissionImportRow = {
+  id: string;
+  broker_id: string;
+  period: string;
+  source: "csv" | "api" | "manual";
+  row_count: number;
+  imported_by: string | null;
+  created_at: string;
+};
+
+export type CommissionRowRow = {
+  id: string;
+  import_id: string;
+  broker_id: string;
+  uid: string;
+  volume: number | null;
+  fees: number | null;
+  backend_commission: number;
+  matched_user_id: string | null;
+  for_period: string;
+  created_at: string;
+};
+
+export type RewardAllocationType = "member" | "captain" | "leaderboard" | "campaign" | "donation" | "operation";
+export type RewardLedgerStatus = "estimated" | "pending" | "approved" | "paid";
+export type RewardSourceType = "commission_row" | "manual" | "campaign";
+
+export type RewardLedgerRow = {
+  id: string;
+  user_id: string | null;
+  source_type: RewardSourceType;
+  allocation_type: RewardAllocationType;
+  amount: number;
+  status: RewardLedgerStatus;
+  period: string | null;
+  commission_row_id: string | null;
+  created_at: string;
+  approved_at: string | null;
+  approved_by: string | null;
+  paid_at: string | null;
+  paid_by: string | null;
+};
+
+export type AuditLogRow = {
+  id: string;
+  actor_id: string | null;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -180,6 +233,40 @@ export type Database = {
             >
           >;
         Update: Partial<BrokerAccountRow>;
+        Relationships: [];
+      };
+      commission_imports: {
+        Row: CommissionImportRow;
+        Insert: Omit<CommissionImportRow, "id" | "row_count" | "created_at"> &
+          Partial<Pick<CommissionImportRow, "id" | "row_count" | "created_at">>;
+        Update: Partial<CommissionImportRow>;
+        Relationships: [];
+      };
+      commission_rows: {
+        Row: CommissionRowRow;
+        Insert: Omit<CommissionRowRow, "id" | "created_at"> & Partial<Pick<CommissionRowRow, "id" | "created_at">>;
+        Update: Partial<CommissionRowRow>;
+        Relationships: [];
+      };
+      reward_ledger: {
+        Row: RewardLedgerRow;
+        Insert: Omit<
+          RewardLedgerRow,
+          "id" | "status" | "created_at" | "approved_at" | "approved_by" | "paid_at" | "paid_by"
+        > &
+          Partial<
+            Pick<
+              RewardLedgerRow,
+              "id" | "status" | "created_at" | "approved_at" | "approved_by" | "paid_at" | "paid_by"
+            >
+          >;
+        Update: Partial<RewardLedgerRow>;
+        Relationships: [];
+      };
+      audit_logs: {
+        Row: AuditLogRow;
+        Insert: Omit<AuditLogRow, "id" | "created_at"> & Partial<Pick<AuditLogRow, "id" | "created_at">>;
+        Update: Partial<AuditLogRow>;
         Relationships: [];
       };
     };

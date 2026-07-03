@@ -21,6 +21,7 @@ migrations **in order**:
 6. [`supabase/migrations/0006_fix_admin_review.sql`](./supabase/migrations/0006_fix_admin_review.sql)
 7. [`supabase/migrations/0007_trend_updates.sql`](./supabase/migrations/0007_trend_updates.sql)
 8. [`supabase/migrations/0008_broker_station.sql`](./supabase/migrations/0008_broker_station.sql)
+9. [`supabase/migrations/0009_reward_ledger.sql`](./supabase/migrations/0009_reward_ledger.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -126,7 +127,29 @@ Members can freely edit their UID while `submitted`, and resubmitting after a
 `rejected` verdict flips the status back to `submitted`; every other
 transition is admin-only (enforced by a DB trigger, not just the UI). A
 verified broker account is the eligibility gate for the reward engine and
-leaderboard (built in a later milestone).
+leaderboard.
+
+### Reward ledger (commission import)
+
+Admins import a broker's commission report on `/admin/commissions`: pick the
+broker + a period label (e.g. `2026-07`), upload a CSV with columns `uid,
+volume, fees, backend_commission`, **Preview** to see how many rows match a
+`verified` broker account, then **Commit import**. Committing stores the raw
+rows (`commission_imports` / `commission_rows`) and splits each matched row's
+figures into `reward_ledger` entries:
+
+- **Member** reward = the member's own `fees` × their plan's reward rate
+  (`lib/rewards.ts` — Basic/Pro/Elite rates from blueprint §5, tune there).
+- **Donation** / **Operation** = a fixed percentage of `backend_commission`
+  (also in `lib/rewards.ts`). These have no individual recipient.
+- Captain/leaderboard/campaign allocations aren't computed yet — there's no
+  captain network or leaderboard to credit until a later milestone.
+
+New entries land as `pending`. Admins bulk-select rows on `/admin/rewards` to
+**Approve** (`pending` → `approved`) then **Mark paid** (`approved` → `paid`);
+both actions write an `audit_logs` row. Members see their own totals and line
+items on `/dashboard/rewards` — public framing only ("trading fee reward"),
+never the backend commission rate itself.
 
 ---
 
