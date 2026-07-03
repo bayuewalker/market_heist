@@ -27,6 +27,7 @@ export default function DeleteAccountSection() {
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete your account.");
+    } finally {
       setLoading(false);
     }
   }

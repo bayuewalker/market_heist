@@ -16,13 +16,13 @@ export default function ChangePasswordForm() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSaved(false);
     if (password !== confirm) {
       setError("Passwords don't match.");
       return;
     }
     setLoading(true);
     setError(null);
-    setSaved(false);
     const supabase = createClient();
     const { error: updateError } = await supabase.auth.updateUser({ password });
     if (updateError) {

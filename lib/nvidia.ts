@@ -33,24 +33,36 @@ function toNumberOrNull(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function extractJson(content: string): Record<string, unknown> {
   const cleaned = content
     .replace(/```json/gi, "")
     .replace(/```/g, "")
     .trim();
   try {
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    if (isPlainObject(parsed)) return parsed;
   } catch {
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        return JSON.parse(match[0]);
-      } catch {
-        throw new Error("Could not parse a signal from the AI response.");
-      }
-    }
-    throw new Error("Could not parse a signal from the AI response.");
+    // fall through to brace-matching below
   }
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      const parsed = JSON.parse(match[0]);
+      if (isPlainObject(parsed)) return parsed;
+    } catch {
+      // fall through to the shared error below
+    }
+  }
+  throw new Error("Could not parse a signal from the AI response.");
+}
+
+/** Strip invisible Unicode formatting characters that can sneak in when a key is pasted from some sources. */
+function sanitizeApiKey(key: string): string {
+  return key.replace(/[​-‏‪-‮﻿]/g, "").trim();
 }
 
 /**
@@ -59,8 +71,9 @@ function extractJson(content: string): Record<string, unknown> {
  * profit guarantees.
  */
 export async function generateSignal(input: SignalInput): Promise<GeneratedSignal> {
-  const apiKey = process.env.NVIDIA_API_KEY;
-  if (!apiKey) throw new Error("NVIDIA_API_KEY is not configured.");
+  const rawApiKey = process.env.NVIDIA_API_KEY;
+  if (!rawApiKey) throw new Error("NVIDIA_API_KEY is not configured.");
+  const apiKey = sanitizeApiKey(rawApiKey);
   const model = process.env.NVIDIA_MODEL || DEFAULT_MODEL;
 
   const system =

@@ -16,9 +16,12 @@ const marketMeta: Record<MarketKind, { label: string; icon: LucideIcon }> = {
 };
 
 function fmtDate(iso: string) {
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
-    new Date(iso),
-  );
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(iso));
 }
 
 export default async function TrendsPage() {
