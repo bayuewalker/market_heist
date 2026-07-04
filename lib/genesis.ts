@@ -61,7 +61,10 @@ export async function syncGenesisEligibility(
   const isEligible = Object.values(checklist).every(Boolean);
 
   if (existing?.reservation_id) {
-    return { checklist, isEligible: existing.is_eligible, reservationId: existing.reservation_id };
+    // A minted reservation is proof of eligibility on its own — sticky by
+    // design, so this never re-derives from the (possibly stale) is_eligible
+    // flag or the checklist just computed above.
+    return { checklist, isEligible: true, reservationId: existing.reservation_id };
   }
   if (!isEligible) {
     return { checklist, isEligible: false, reservationId: null };

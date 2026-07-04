@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { parseCommissionCsv, matchCommissionRows } from "@/lib/commissions";
 import { computeRewardAllocations, writeAuditLog } from "@/lib/rewards";
+import { getCaptainTier } from "@/lib/captain";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -92,19 +93,35 @@ export async function POST(request: Request) {
       : { data: [] };
   const captainByMember = new Map((captainLinks ?? []).map((c) => [c.member_id, c.captain_id]));
 
+  // Each captain's reward rate depends on their CURRENT tier (referred-
+  // member count), so batch-count every referenced captain's full branch —
+  // not just the members matched in this import.
+  const captainIds = [...new Set([...captainByMember.values()].filter((id): id is string => !!id))];
+  const { data: allCaptainLinks } =
+    captainIds.length > 0
+      ? await admin.from("captain_networks").select("captain_id").in("captain_id", captainIds)
+      : { data: [] };
+  const referredCountByCaptain = new Map<string, number>();
+  for (const row of allCaptainLinks ?? []) {
+    referredCountByCaptain.set(row.captain_id, (referredCountByCaptain.get(row.captain_id) ?? 0) + 1);
+  }
+
   // insertedRows[i] corresponds to matched[i]: this is a single INSERT ...
   // VALUES (...), (...) RETURNING id built from `matched.map(...)` above, and
   // Postgres preserves VALUES-list order in RETURNING for a plain multi-row
   // insert (no ORDER BY/trigger reordering involved) — the length check above
   // is a defensive guard against a partial-insert edge case, not evidence
   // this ordering assumption is otherwise unsafe.
-  const allocations = matched.flatMap((r, i) =>
-    computeRewardAllocations({
+  const allocations = matched.flatMap((r, i) => {
+    const captainId = r.matched_user_id ? captainByMember.get(r.matched_user_id) ?? null : null;
+    const captainTier = captainId ? getCaptainTier(referredCountByCaptain.get(captainId) ?? 0) : null;
+    return computeRewardAllocations({
       matchedUserId: r.matched_user_id,
       matchedPlanId: r.matched_plan_id,
       fees: r.fees,
       backendCommission: r.backend_commission,
-      captainId: r.matched_user_id ? captainByMember.get(r.matched_user_id) ?? null : null,
+      captainId,
+      captainRewardRate: captainTier?.rewardRate ?? null,
     }).map((a) => ({
       user_id: a.user_id,
       source_type: "commission_row" as const,
@@ -113,8 +130,8 @@ export async function POST(request: Request) {
       status: "pending" as const,
       period,
       commission_row_id: insertedRows[i].id,
-    })),
-  );
+    }));
+  });
 
   if (allocations.length > 0) {
     const { error: ledgerErr } = await admin.from("reward_ledger").insert(allocations);

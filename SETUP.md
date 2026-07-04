@@ -127,9 +127,8 @@ session link.
 
 Migration `0015` adds `leaderboard_entries`, `referral_codes`,
 `captain_networks`, `genesis_eligibility`, `profiles.genesis_joined_at`, and
-widens `profiles.role` to include `captain` (self-service — any member
-becomes a captain by generating a code, not an admin-granted privilege like
-`admin`).
+widens `profiles.role` to include `captain` — **admin-assignable only**
+(issue #24), same class of privilege as `admin`.
 
 `/dashboard/leaderboard` shows 5 boards (Volume, Reward, Discipline,
 Captain, Points — §22). Volume/Reward/Captain require a `verified` broker
@@ -141,18 +140,26 @@ weighted formula (40% volume / 25% active days / 20% journal / 10% reward /
 5% community) — the one board meant to reward well-rounded activity rather
 than a single raw metric.
 
-`/dashboard/captain` lets any member generate a Captain Code (`POST
-/api/captain/code`) and get a shareable signup link
-(`/signup?ref=<code>`). Referral attribution happens at signup time via a
-`handle_new_user()` trigger extension — the signup form passes the `ref`
-query param through `auth.signUp()`'s user metadata, and the trigger creates
-a `captain_networks` row if the code is valid. Tiers (Scout → Elite Captain)
-are based on referred-member count — Captain Code V1 is intentionally
-lightweight, full verification-gated tiering is a V2 Captain Dashboard
-feature (§17.2). Captain Reward (a flat % of the backend commission on a
-referred member's matched trades, never proportional to their own reward —
-not MLM, §23) is computed in `lib/rewards.ts` alongside the existing
-member/donation/operation buckets.
+Admins promote a member to `captain` from `/admin/users` — that action
+immediately generates their referral code (`getOrCreateReferralCode` in
+`lib/captain.ts`); demoting a captain away deactivates their code so old
+signup links stop attributing to them. `/dashboard/captain` shows the
+shareable link (`/signup?ref=<code>`) to captains, or a locked "ask an
+admin" message to everyone else. Referral attribution happens at signup
+time via a `handle_new_user()` trigger extension — the signup form passes
+the `ref` query param through `auth.signUp()`'s user metadata (normalized
+to lowercase/trimmed, both client-side and again in the trigger), and the
+trigger creates a `captain_networks` row if the code is valid.
+
+Tiers and reward rates are exact per issue #24's acceptance criteria:
+Scout (5 referrals, 2%) → Captain (25, 4%) → Commander (100, 6%) → Elite
+Captain (250+, 10%) — below 5 referrals there's no tier and no Captain
+Reward accrues yet. Captain Code V1 is intentionally lightweight; full
+verification-gated tiering is a V2 Captain Dashboard feature (§17.2).
+Captain Reward (a % of the backend commission on a referred member's
+matched trades, scaled by the captain's current tier, never proportional
+to the referred member's own reward — not MLM, §23) is computed in
+`lib/rewards.ts` alongside the existing member/donation/operation buckets.
 
 `/dashboard/genesis` is a pull-based eligibility checklist (§12.7): Telegram
 linked, profile completed, broker UID submitted, broker UID verified, ≥1,500

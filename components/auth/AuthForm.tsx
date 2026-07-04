@@ -28,7 +28,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = safeRedirect(searchParams.get("redirect"));
-  const refCode = searchParams.get("ref")?.trim().slice(0, 32) || undefined;
+  const refCode = searchParams.get("ref")?.trim().toLowerCase().slice(0, 32) || undefined;
 
   const isSignup = mode === "signup";
   const [fullName, setFullName] = useState("");

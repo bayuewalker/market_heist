@@ -5,18 +5,21 @@
 -- founder-approved table in WORKING_PLAN.md §4.
 
 -- ---------------------------------------------------------------------------
--- Widen profiles.role to add 'captain' — a self-service status (any member
--- can generate a referral code and become a captain), not an admin-granted
--- privilege like 'admin'. Existing guard trigger (0006) already allows any
--- value change only via admin/service-role, so this is safe to widen.
+-- Widen profiles.role to add 'captain' — admin-assignable only (issue #24),
+-- same class of privilege as 'admin'. The existing guard trigger (0006)
+-- already restricts every role change to admin/service-role, so widening
+-- the CHECK constraint doesn't open any new self-service path.
 -- ---------------------------------------------------------------------------
 alter table public.profiles drop constraint if exists profiles_role_check;
 alter table public.profiles add constraint profiles_role_check check (role in ('member', 'admin', 'captain'));
 
 -- ---------------------------------------------------------------------------
--- referral_codes: Captain Code V1 — one stable code per captain. Public read
--- (needed to validate a code exists before signup); writes are server-side
--- only (POST /api/captain/code), never a direct client insert.
+-- referral_codes: Captain Code V1 — one stable code per captain. Readable by
+-- any signed-in member (not anon — a code isn't validated client-side before
+-- signup, so there's no legitimate need for unauthenticated reads, and an
+-- anon `using (true)` policy would let anyone scrape every captain_id/code
+-- pair). Writes are server-side only (POST /api/captain/code), never a
+-- direct client insert.
 -- ---------------------------------------------------------------------------
 create table if not exists public.referral_codes (
   code        text primary key,
@@ -30,9 +33,10 @@ create index if not exists referral_codes_captain_idx on public.referral_codes (
 alter table public.referral_codes enable row level security;
 
 drop policy if exists "referral codes readable by everyone" on public.referral_codes;
-create policy "referral codes readable by everyone"
+drop policy if exists "referral codes readable by signed-in users" on public.referral_codes;
+create policy "referral codes readable by signed-in users"
   on public.referral_codes for select
-  using (true);
+  using (auth.uid() is not null);
 
 -- ---------------------------------------------------------------------------
 -- captain_networks: captain <-> referred-member link, one row per referred
@@ -62,8 +66,9 @@ create policy "admin reads all captain networks"
   using (public.is_admin());
 
 -- ---------------------------------------------------------------------------
--- leaderboard_entries: unified snapshot for all 5 board types (§22). Public
--- read (motivational, not sensitive) — writes are server-side only, via the
+-- leaderboard_entries: unified snapshot for all 5 board types (§22).
+-- Public-to-members, not public-to-anon — readable by any signed-in member,
+-- not unauthenticated requests. Writes are server-side only, via the
 -- periodic recompute job (POST /api/leaderboard/recompute).
 -- ---------------------------------------------------------------------------
 create table if not exists public.leaderboard_entries (
@@ -83,9 +88,10 @@ create index if not exists leaderboard_entries_board_idx on public.leaderboard_e
 alter table public.leaderboard_entries enable row level security;
 
 drop policy if exists "leaderboard entries readable by everyone" on public.leaderboard_entries;
-create policy "leaderboard entries readable by everyone"
+drop policy if exists "leaderboard entries readable by signed-in users" on public.leaderboard_entries;
+create policy "leaderboard entries readable by signed-in users"
   on public.leaderboard_entries for select
-  using (true);
+  using (auth.uid() is not null);
 
 -- ---------------------------------------------------------------------------
 -- genesis_eligibility: off-chain Genesis Pass eligibility tracker (§12.7).
@@ -152,8 +158,10 @@ begin
   )
   on conflict (id) do nothing;
 
-  v_ref_code := new.raw_user_meta_data ->> 'ref_code';
-  if v_ref_code is not null then
+  -- Normalize: codes are always generated as lowercase hex, but a manually
+  -- typed/pasted code could arrive uppercased or with stray whitespace.
+  v_ref_code := lower(trim(new.raw_user_meta_data ->> 'ref_code'));
+  if v_ref_code is not null and v_ref_code != '' then
     select captain_id into v_captain_id
       from public.referral_codes
       where code = v_ref_code and active and captain_id != new.id;

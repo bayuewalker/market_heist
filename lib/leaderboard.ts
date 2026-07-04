@@ -49,7 +49,7 @@ export async function computeLeaderboards(
   const volumeByUser = new Map<string, number>();
   for (const row of commissionRows ?? []) {
     if (!row.matched_user_id || !verifiedUserIds.has(row.matched_user_id)) continue;
-    volumeByUser.set(row.matched_user_id, (volumeByUser.get(row.matched_user_id) ?? 0) + (row.volume ?? 0));
+    volumeByUser.set(row.matched_user_id, (volumeByUser.get(row.matched_user_id) ?? 0) + Number(row.volume ?? 0));
   }
 
   const { data: rewardRows } = await admin
@@ -60,7 +60,7 @@ export async function computeLeaderboards(
   const rewardByUser = new Map<string, number>();
   for (const row of rewardRows ?? []) {
     if (!row.user_id || !verifiedUserIds.has(row.user_id)) continue;
-    rewardByUser.set(row.user_id, (rewardByUser.get(row.user_id) ?? 0) + row.amount);
+    rewardByUser.set(row.user_id, (rewardByUser.get(row.user_id) ?? 0) + Number(row.amount));
   }
 
   const { data: journalRows } = await admin.from("trade_journals").select("user_id, followed_plan, traded_at");
@@ -80,7 +80,7 @@ export async function computeLeaderboards(
     .order("created_at", { ascending: false });
   const pointsByUser = new Map<string, number>();
   for (const row of pointsRows ?? []) {
-    if (!pointsByUser.has(row.user_id)) pointsByUser.set(row.user_id, row.balance_after);
+    if (!pointsByUser.has(row.user_id)) pointsByUser.set(row.user_id, Number(row.balance_after));
   }
 
   const { data: captainRows } = await admin.from("captain_networks").select("captain_id");
@@ -170,13 +170,37 @@ export async function recomputeAndStoreLeaderboards(
       metrics: e.metrics,
       computed_at: computedAt,
     }));
+    const freshUserIds = new Set(rows.map((r) => r.user_id));
 
-    // Clear the board's stale snapshot before inserting the fresh one — a
-    // user who drops to zero shouldn't linger with a stale rank.
-    await admin.from("leaderboard_entries").delete().eq("board", board).eq("period", "all_time");
+    // Write the fresh snapshot first — if a later step in this loop throws,
+    // the board still has this run's data rather than sitting empty.
     if (rows.length > 0) {
-      await admin.from("leaderboard_entries").insert(rows);
+      const { error: upsertError } = await admin
+        .from("leaderboard_entries")
+        .upsert(rows, { onConflict: "board,period,user_id" });
+      if (upsertError) throw new Error(`Failed to upsert ${board} leaderboard: ${upsertError.message}`);
     }
+
+    // Then clear rows for users who dropped out of this board entirely
+    // (e.g. zero volume this run) — done after the fresh write, never before.
+    const { data: existingRows, error: existingError } = await admin
+      .from("leaderboard_entries")
+      .select("user_id")
+      .eq("board", board)
+      .eq("period", "all_time");
+    if (existingError) throw new Error(`Failed to read existing ${board} leaderboard rows: ${existingError.message}`);
+
+    const staleUserIds = (existingRows ?? []).map((r) => r.user_id).filter((id) => !freshUserIds.has(id));
+    if (staleUserIds.length > 0) {
+      const { error: deleteError } = await admin
+        .from("leaderboard_entries")
+        .delete()
+        .eq("board", board)
+        .eq("period", "all_time")
+        .in("user_id", staleUserIds);
+      if (deleteError) throw new Error(`Failed to clear stale ${board} leaderboard rows: ${deleteError.message}`);
+    }
+
     counts[board] = rows.length;
   }
 

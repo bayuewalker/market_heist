@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { LeaderboardBoard } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -42,28 +43,37 @@ export default async function LeaderboardPage({
   const { board: boardKey } = await searchParams;
   const activeBoard = BOARDS.find((b) => b.key === boardKey) ?? BOARDS[0];
 
-  const { data: entries } = await supabase
+  const { data: rawEntries } = await supabase
     .from("leaderboard_entries")
     .select("user_id, score, rank, metrics")
     .eq("board", activeBoard.key)
     .eq("period", "all_time")
     .order("rank", { ascending: true })
     .limit(20);
+  // leaderboard_entries.score is a Postgres numeric — PostgREST can return
+  // numeric columns as strings to avoid float precision loss, so coerce
+  // before any arithmetic/formatting.
+  const entries = (rawEntries ?? []).map((e) => ({ ...e, score: Number(e.score) }));
 
-  const { data: ownEntry } = await supabase
+  const { data: rawOwnEntry } = await supabase
     .from("leaderboard_entries")
     .select("score, rank")
     .eq("board", activeBoard.key)
     .eq("period", "all_time")
     .eq("user_id", user.id)
     .maybeSingle();
+  const ownEntry = rawOwnEntry ? { ...rawOwnEntry, score: Number(rawOwnEntry.score) } : null;
 
-  const userIds = [...new Set((entries ?? []).map((e) => e.user_id))];
+  // profiles' RLS only allows reading your own row, so a cross-user name
+  // lookup needs the service role — full_name isn't sensitive and this is
+  // the one field this query selects.
+  const admin = createAdminClient();
+  const userIds = [...new Set(entries.map((e) => e.user_id))];
   const { data: profiles } =
-    userIds.length > 0 ? await supabase.from("profiles").select("id, full_name").in("id", userIds) : { data: [] };
+    userIds.length > 0 ? await admin.from("profiles").select("id, full_name").in("id", userIds) : { data: [] };
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
 
-  const ownRankShown = (entries ?? []).some((e) => e.user_id === user.id);
+  const ownRankShown = entries.some((e) => e.user_id === user.id);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
