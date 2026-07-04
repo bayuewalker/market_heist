@@ -5,21 +5,37 @@ const BANNED_PHRASES = [
   "passive income",
   "managed fund",
   "no loss",
-  "risk-free",
   "risk free",
   "fixed return",
   "token promise",
   "nft speculation",
 ];
 
+// Collapses case, any hyphen/dash variant (ascii "-" through unicode dashes),
+// and repeated whitespace down to a single space, so "guaranteed-profit",
+// "Guaranteed   Profit", and "guaranteed‑profit" all normalize to the
+// same "guaranteed profit" the banned-phrase list is written against —
+// otherwise those formatting variants would silently bypass the gate.
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[-‐-―−]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const NORMALIZED_BANNED_PHRASES = BANNED_PHRASES.map((phrase) => [normalize(phrase), phrase] as const);
+
 /**
- * Returns the first banned phrase found in `text` (case-insensitive), or
- * null — cross-cutting rule #1: no profit-guarantee/MLM-style framing
- * anywhere user-facing, including admin-editable persona copy.
+ * Returns the first banned phrase found in `text` (case- and
+ * formatting-insensitive), or null — cross-cutting rule #1: no
+ * profit-guarantee/MLM-style framing anywhere user-facing, including
+ * admin-editable persona copy.
  */
 export function findBannedPhrase(text: string): string | null {
-  const lower = text.toLowerCase();
-  return BANNED_PHRASES.find((phrase) => lower.includes(phrase)) ?? null;
+  const normalized = normalize(text);
+  const match = NORMALIZED_BANNED_PHRASES.find(([needle]) => normalized.includes(needle));
+  return match?.[1] ?? null;
 }
 
 /**
