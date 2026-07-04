@@ -10,7 +10,7 @@ create or replace function public.guard_reward_ledger_no_delete()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = pg_catalog, public
 as $$
 begin
   raise exception 'reward_ledger rows are append-only and cannot be deleted. Insert a correcting row instead.';
