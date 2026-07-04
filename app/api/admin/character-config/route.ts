@@ -2,18 +2,21 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/rewards";
+import { findBannedPhrase, validateHttpUrl } from "@/lib/admin-input-guards";
 import type { CharacterConfigRow } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // character_name is required (non-nullable) and handled separately from the
-// other text fields, which are all nullable — blank clears them.
-const NULLABLE_TEXT_FIELDS = [
+// other text fields, which are all nullable — blank clears them. URL fields
+// are scheme-validated instead of banned-phrase checked (rule #14); the rest
+// are free-text copy that could render The Playmaker's voice anywhere in the
+// app, so they're checked against the compliance copy gate (rule #1).
+const URL_FIELDS = ["avatar_url", "banner_url"] as const;
+const COPY_FIELDS = [
   "role",
   "tagline",
-  "avatar_url",
-  "banner_url",
   "bot_intro_message",
   "signal_prefix",
   "dashboard_note_title",
@@ -50,15 +53,30 @@ export async function PATCH(request: Request) {
   if (body.character_name !== undefined) {
     const name = String(body.character_name).slice(0, MAX_FIELD_LENGTH).trim();
     if (!name) return NextResponse.json({ error: "character_name cannot be empty." }, { status: 400 });
+    const banned = findBannedPhrase(name);
+    if (banned) return NextResponse.json({ error: `Copy can't include "${banned}".` }, { status: 400 });
     update.character_name = name;
   }
 
-  for (const field of NULLABLE_TEXT_FIELDS) {
+  for (const field of COPY_FIELDS) {
     if (body[field] !== undefined) {
       const value = String(body[field]).slice(0, MAX_FIELD_LENGTH);
+      const banned = findBannedPhrase(value);
+      if (banned) return NextResponse.json({ error: `${field} can't include "${banned}".` }, { status: 400 });
       update[field] = value || null;
     }
   }
+
+  for (const field of URL_FIELDS) {
+    if (body[field] !== undefined) {
+      try {
+        update[field] = validateHttpUrl(String(body[field]).slice(0, MAX_FIELD_LENGTH));
+      } catch {
+        return NextResponse.json({ error: `${field} must be a valid http(s) URL.` }, { status: 400 });
+      }
+    }
+  }
+
   if (body.is_active !== undefined) {
     update.is_active = Boolean(body.is_active);
   }
