@@ -38,6 +38,7 @@ export type ProfileRow = {
   plan_expires_at: string | null;
   role: UserRole;
   risk_profile: RiskProfile | null;
+  ai_consent_at: string | null;
   created_at: string;
 };
 
@@ -270,6 +271,37 @@ export type HeisterRankRow = {
   sort_order: number;
 };
 
+export type TradeDirection = "long" | "short";
+export type TradeOutcome = "win" | "loss" | "breakeven";
+
+export type TradeJournalRow = {
+  id: string;
+  user_id: string;
+  pair: string;
+  market: MarketKind | null;
+  direction: TradeDirection;
+  entry: number | null;
+  exit_price: number | null;
+  position_size: number | null;
+  outcome: TradeOutcome | null;
+  followed_plan: boolean;
+  notes: string | null;
+  traded_at: string;
+  created_at: string;
+};
+
+export type MentorFunction = "chat" | "position_size" | "bot_template" | "trade_review";
+
+export type AiChatSessionRow = {
+  id: string;
+  user_id: string;
+  function: MentorFunction;
+  input: Record<string, unknown>;
+  output: string | null;
+  token_usage: number;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -439,6 +471,20 @@ export type Database = {
         Insert: Omit<HeisterRankRow, "id" | "rules_json" | "active" | "sort_order"> &
           Partial<Pick<HeisterRankRow, "id" | "rules_json" | "active" | "sort_order">>;
         Update: Partial<HeisterRankRow>;
+        Relationships: [];
+      };
+      trade_journals: {
+        Row: TradeJournalRow;
+        Insert: Omit<TradeJournalRow, "id" | "outcome" | "followed_plan" | "notes" | "traded_at" | "created_at"> &
+          Partial<Pick<TradeJournalRow, "id" | "outcome" | "followed_plan" | "notes" | "traded_at" | "created_at">>;
+        Update: Partial<TradeJournalRow>;
+        Relationships: [];
+      };
+      ai_chat_sessions: {
+        Row: AiChatSessionRow;
+        Insert: Omit<AiChatSessionRow, "id" | "output" | "token_usage" | "created_at"> &
+          Partial<Pick<AiChatSessionRow, "id" | "output" | "token_usage" | "created_at">>;
+        Update: Partial<AiChatSessionRow>;
         Relationships: [];
       };
     };

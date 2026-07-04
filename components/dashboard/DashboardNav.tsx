@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BookOpen,
   CalendarClock,
   Coins,
   CreditCard,
@@ -31,8 +32,10 @@ const items: NavItem[] = [
   { href: "/dashboard/rewards", label: "Rewards", icon: Coins },
   { href: "/dashboard/signals", label: "Signals", icon: Radar },
   { href: "/dashboard/request", label: "Request signal", icon: Sparkles },
+  { href: "/dashboard/ai-mentor", label: "Mentor Heister", icon: Sparkles },
+  { href: "/dashboard/journal", label: "Trade Journal", icon: BookOpen },
   { href: "/dashboard/trends", label: "Trends", icon: TrendingUp },
-  { href: "/dashboard/mentoring", label: "Mentoring", icon: CalendarClock },
+  { href: "/dashboard/mentoring", label: "Live Mentoring", icon: CalendarClock },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/account", label: "Account", icon: UserRound },
 ];
@@ -76,7 +79,7 @@ export default function DashboardNav({
           const active =
             item.href === "/dashboard"
               ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <Link

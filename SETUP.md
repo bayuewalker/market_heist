@@ -26,6 +26,7 @@ migrations **in order**:
 11. [`supabase/migrations/0011_telegram.sql`](./supabase/migrations/0011_telegram.sql)
 12. [`supabase/migrations/0012_missions_points_rank.sql`](./supabase/migrations/0012_missions_points_rank.sql)
 13. [`supabase/migrations/0013_signal_engine_v2.sql`](./supabase/migrations/0013_signal_engine_v2.sql)
+14. [`supabase/migrations/0014_mentor_journal.sql`](./supabase/migrations/0014_mentor_journal.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -220,6 +221,44 @@ transition on `/admin/signals`. Either path writes a `signal_updates` row
 
 The active Playmaker persona's `signal_prefix` (migration `0010`) is
 prepended to each generated signal's `ai_note`.
+
+### Mentor Heister (GPT Mentor) + Trade Journal
+
+Migration `0014` adds `trade_journals` (a member's private, self-logged trade
+history — freely editable, not a business ledger) and `ai_chat_sessions`
+(append-only, DB-guard-triggered like `reward_ledger`/`heist_points_ledger` —
+every Mentor call's token usage is logged here for future cost-visibility
+dashboards, §17.4/V2). Also adds `profiles.ai_consent_at`, a self-service
+field (same class as `risk_profile`) recording when a member accepted the
+AI Data consent gate.
+
+`/dashboard/ai-mentor` is Pro+ only (locked with an upgrade CTA on Basic) and
+gated behind the AI Data consent gate (`AiConsentGate`, covering AI Data /
+Journal Data / Broker Activity Data / Reward Data usage — the full
+consent-page copy ships with M12's Trust pages). Once past both gates:
+
+- **Chat** — free-form questions plus quick actions (explain my latest
+  signal, suggest a broker route, summarize my journal, am I overtrading)
+  that inject server-fetched context into the prompt.
+- **Position size calculator** — pure deterministic math, no LLM call (zero
+  token cost, instant).
+- **Paper bot template** — describes a backtest/paper-tracking rule set in
+  plain language; the system prompt hard-bans auto-execution code or live
+  broker wiring.
+- **Trade review** — triggered per-entry from `/dashboard/journal`, reviews
+  a single journaled trade for discipline feedback.
+
+All four map to `POST /api/mentor/{chat,position-size,bot-template,trade-review}`,
+each re-checking the Pro+ + consent gate server-side and logging to
+`ai_chat_sessions` via the service role (members have no direct
+insert/update/delete access to that table).
+
+`/dashboard/journal` is open to every plan: log a trade (pair, direction,
+entry/exit, size, outcome, whether you followed your plan, notes), see a
+discipline score (% of trades where you followed your own plan) and an
+overtrading banner (more than 5 trades logged on one UTC day). Trades are
+edited/deleted directly via the browser client under RLS — no admin
+mediation needed since this is personal data, not a shared ledger.
 
 ### Reward ledger (commission import)
 

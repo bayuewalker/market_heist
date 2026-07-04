@@ -69,7 +69,10 @@ export default function AdminNav({ email }: { email: string }) {
         className={`${open ? "flex" : "hidden"} flex-col gap-1 border-t border-border-subtle px-4 pb-4 md:flex md:border-t-0 md:px-0 md:pb-0`}
       >
         {items.map((item) => {
-          const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+          const active =
+            item.href === "/admin"
+              ? pathname === "/admin"
+              : pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <Link
