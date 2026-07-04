@@ -46,7 +46,7 @@ Recorded here so future work doesn't re-litigate them.
 | Security cleanup, secure auth, roles (member/admin) | ✅ Done | `app/(auth)/*`, `lib/supabase/*`, migrations `0005`/`0006` |
 | Membership plans (Basic / Pro / Elite) | ✅ Done | `supabase/migrations/0001`, `lib/pricing.ts` |
 | Payments (on-chain USDT, TRC20) + membership expiry | ✅ Done (crypto path) | `app/api/payments/*`, `lib/tron.ts`, `lib/payments.ts`, migrations `0003`/`0004` |
-| AI Signal Engine (basic) | 🟡 Partial | `app/api/signals/generate`, `lib/nvidia.ts`, `signals` table |
+| AI Signal Engine (basic) | 🟡 Partial | `app/api/signals/generate`, `lib/nvidia.ts` (+ shared HTTP/auth in `lib/nvidia-client.ts`), `signals` table |
 | Daily trend updates | ✅ Done | `app/dashboard/trends`, `app/api/trends/generate`, migration `0007` |
 | Live mentoring (schedule only) | 🟡 Partial | `app/dashboard/mentoring`, `data/mentoring.ts` |
 | Admin panel (overview / users / signals / payments) | ✅ Done | `app/admin/*`, `lib/admin.ts` |
@@ -58,7 +58,7 @@ Recorded here so future work doesn't re-litigate them.
 **Divergences to accept as-is (already shipped, do not rebuild):**
 
 - **Payments:** §25 says "Stripe first". Repo already ships **crypto USDT** end-to-end. Keep crypto; Stripe stays optional/future.
-- **AI provider:** §25 says OpenAI. Repo uses **NVIDIA OpenAI-compatible API** (`lib/nvidia.ts`). Keep it.
+- **AI provider:** §25 says OpenAI. Repo uses **NVIDIA OpenAI-compatible API** (`lib/nvidia.ts`, `lib/trends.ts`, `lib/mentor.ts` — all sharing HTTP/auth logic via `lib/nvidia-client.ts`). Keep it.
 - **Elite price:** §5.2 lists Elite at **$99/mo**; seed data marks Elite "Coming soon" with `null` price. Reconcile in M12 (Trust & Compliance).
 - **Broker UID status set:** already shipped as `submitted / under_review / verified / rejected / duplicate / inactive` — exactly matches §12.3's table (with `not_submitted` represented as "no row exists", per the existing migration's design note).
 - **Reward Ledger status set:** shipped as `estimated / pending / approved / paid` (migration `0009`) — §7.3 explicitly allows "MVP V1 can start with a shorter status list." The fuller 10-state list (`matched/payable/rejected/adjusted/disputed/reversed`) is **MVP V2 scope**, tied to the Reward Settlement System (§17.7) — see §9 below.
