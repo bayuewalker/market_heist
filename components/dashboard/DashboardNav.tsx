@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,12 +9,14 @@ import {
   CreditCard,
   Landmark,
   LayoutDashboard,
+  Menu,
   Radar,
   ShieldCheck,
   Sparkles,
   TrendingUp,
   Trophy,
   UserRound,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -44,14 +47,31 @@ export default function DashboardNav({
   isAdmin?: boolean;
 }) {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   return (
-    <aside className="flex shrink-0 flex-col gap-6 border-b border-border-subtle bg-surface/60 p-4 md:h-screen md:w-64 md:border-b-0 md:border-r">
-      <Link href="/" aria-label="Market Heist home" className="hidden md:block">
-        <Logo />
-      </Link>
+    <aside className="flex shrink-0 flex-col border-b border-border-subtle bg-surface/60 md:h-screen md:w-64 md:gap-6 md:border-b-0 md:border-r md:p-4">
+      <div className="flex items-center justify-between p-4 md:p-0">
+        <Link href="/" aria-label="Market Heist home">
+          <Logo />
+        </Link>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-lg p-2 text-foreground md:hidden"
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          aria-controls="dashboard-nav-list"
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
+        </button>
+      </div>
 
-      <nav aria-label="Dashboard" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+      <nav
+        id="dashboard-nav-list"
+        aria-label="Dashboard"
+        className={`${open ? "flex" : "hidden"} flex-col gap-1 border-t border-border-subtle px-4 pb-4 md:flex md:border-t-0 md:px-0 md:pb-0`}
+      >
         {items.map((item) => {
           const active =
             item.href === "/dashboard"
@@ -63,7 +83,8 @@ export default function DashboardNav({
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              onClick={() => setOpen(false)}
+              className={`inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? "bg-accent/15 text-accent-strong ring-1 ring-inset ring-accent/25"
                   : "text-muted hover:bg-white/5 hover:text-foreground"
@@ -77,7 +98,8 @@ export default function DashboardNav({
         {isAdmin && (
           <Link
             href="/admin"
-            className="inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-accent-strong transition-colors hover:bg-accent/10"
+            onClick={() => setOpen(false)}
+            className="inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-accent-strong transition-colors hover:bg-accent/10"
           >
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
             Admin panel

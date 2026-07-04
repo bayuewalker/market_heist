@@ -89,11 +89,11 @@ export default function HeroVisual() {
         {/* Pair ticker */}
         <div className="mt-3 flex items-center gap-2 px-1">
           <Activity className="h-4 w-4 shrink-0 text-accent-strong" aria-hidden="true" />
-          <div className="grid flex-1 grid-cols-3 gap-2">
+          <div className="grid flex-1 grid-cols-3 gap-1.5 sm:gap-2">
             {pairs.map((pair) => (
               <div
                 key={pair.symbol}
-                className="rounded-lg border border-border-subtle bg-background/50 px-2 py-1.5 text-center"
+                className="rounded-lg border border-border-subtle bg-background/50 px-1 py-1.5 text-center sm:px-2"
               >
                 <p className="text-[10px] font-medium tracking-wide text-muted">{pair.symbol}</p>
                 <p

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,12 +9,14 @@ import {
   FileSpreadsheet,
   Landmark,
   LayoutDashboard,
+  Menu,
   Radar,
   ShieldCheck,
   Trophy,
   Users,
   UserRound,
   Wallet,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Logo from "@/components/Logo";
@@ -35,19 +38,36 @@ const items: NavItem[] = [
 
 export default function AdminNav({ email }: { email: string }) {
   const pathname = usePathname();
+  const [open, setOpen] = useState(false);
 
   return (
-    <aside className="flex shrink-0 flex-col gap-6 border-b border-border-subtle bg-surface/60 p-4 md:h-screen md:w-64 md:border-b-0 md:border-r">
-      <Link href="/" aria-label="Market Heist home" className="hidden md:block">
-        <Logo />
-      </Link>
+    <aside className="flex shrink-0 flex-col border-b border-border-subtle bg-surface/60 md:h-screen md:w-64 md:gap-6 md:border-b-0 md:border-r md:p-4">
+      <div className="flex items-center justify-between p-4 md:p-0">
+        <Link href="/" aria-label="Market Heist home">
+          <Logo />
+        </Link>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-lg p-2 text-foreground md:hidden"
+          aria-label={open ? "Close menu" : "Open menu"}
+          aria-expanded={open}
+          aria-controls="admin-nav-list"
+          onClick={() => setOpen((o) => !o)}
+        >
+          {open ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
+        </button>
+      </div>
 
-      <div className="hidden items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-medium text-accent-strong md:flex">
+      <div className="mx-4 hidden items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs font-medium text-accent-strong md:mx-0 md:flex">
         <ShieldCheck className="h-4 w-4" aria-hidden="true" />
         Admin mode
       </div>
 
-      <nav aria-label="Admin" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+      <nav
+        id="admin-nav-list"
+        aria-label="Admin"
+        className={`${open ? "flex" : "hidden"} flex-col gap-1 border-t border-border-subtle px-4 pb-4 md:flex md:border-t-0 md:px-0 md:pb-0`}
+      >
         {items.map((item) => {
           const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
           const Icon = item.icon;
@@ -56,7 +76,8 @@ export default function AdminNav({ email }: { email: string }) {
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              onClick={() => setOpen(false)}
+              className={`inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? "bg-accent/15 text-accent-strong ring-1 ring-inset ring-accent/25"
                   : "text-muted hover:bg-white/5 hover:text-foreground"
@@ -69,7 +90,8 @@ export default function AdminNav({ email }: { email: string }) {
         })}
         <Link
           href="/dashboard"
-          className="mt-1 inline-flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground"
+          onClick={() => setOpen(false)}
+          className="mt-1 inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground"
         >
           <Activity className="h-4 w-4" aria-hidden="true" />
           Back to dashboard

@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { generateSignal } from "@/lib/nvidia";
 import { getMarketContext } from "@/lib/marketdata";
+import { notifyUserByTelegram, escapeTelegramHtml, appUrl } from "@/lib/telegram";
 import type { MarketKind } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -100,6 +102,18 @@ export async function POST(request: Request) {
     );
   }
 
+  // The active Playmaker persona's signal_prefix (M6) flavors the mentor tip,
+  // e.g. "Heist Alert: <ai_note>" — cosmetic only, never touches the levels.
+  const { data: character } = await supabase
+    .from("character_configs")
+    .select("signal_prefix")
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+  const aiNote = character?.signal_prefix
+    ? `${character.signal_prefix}: ${generated.aiNote}`.slice(0, 200)
+    : generated.aiNote;
+
   const { data: inserted, error: insertError } = await supabase
     .from("signals")
     .insert({
@@ -109,10 +123,16 @@ export async function POST(request: Request) {
       timeframe,
       bias: generated.bias,
       entry: generated.entry,
-      target: generated.target,
       stop: generated.stop,
+      invalidation: generated.invalidation,
+      tp1: generated.tp1,
+      tp2: generated.tp2,
+      tp3: generated.tp3,
+      risk_level: generated.riskLevel,
       confidence: generated.confidence,
       technique: generated.technique,
+      setup_reason: generated.setupReason,
+      ai_note: aiNote,
       rationale: generated.rationale,
       status: "active",
     })
@@ -122,6 +142,16 @@ export async function POST(request: Request) {
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
+
+  // Best-effort Telegram push (notifyUserByTelegram never throws) — awaited
+  // so the send attempt actually completes before this serverless function
+  // returns, rather than racing the response.
+  await notifyUserByTelegram(
+    createAdminClient(),
+    user.id,
+    `<b>PLAYMAKER SIGNAL ALERT</b>\nPair: ${escapeTelegramHtml(pair)}\nBias: ${escapeTelegramHtml(generated.bias)}`,
+    { buttons: [[{ text: "Open full analysis", url: appUrl("/dashboard/signals") }]] },
+  );
 
   return NextResponse.json({ signal: inserted });
 }

@@ -199,7 +199,7 @@ async function handleSignal(admin: SupabaseClient<Database>, from: TelegramFrom)
 
   const { data: signal } = await admin
     .from("signals")
-    .select("pair, bias, entry, target, stop, rationale, created_at")
+    .select("pair, bias, entry, tp1, stop, rationale, created_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -216,7 +216,7 @@ async function handleSignal(admin: SupabaseClient<Database>, from: TelegramFrom)
     `Pair: ${escapeTelegramHtml(signal.pair)}`,
     `Bias: ${escapeTelegramHtml(signal.bias)}`,
     signal.entry !== null ? `Entry: ${signal.entry}` : null,
-    signal.target !== null ? `Target: ${signal.target}` : null,
+    signal.tp1 !== null ? `TP1: ${signal.tp1}` : null,
     signal.stop !== null ? `Stop: ${signal.stop}` : null,
     signal.rationale ? `\n${escapeTelegramHtml(signal.rationale)}` : null,
   ].filter(Boolean);
