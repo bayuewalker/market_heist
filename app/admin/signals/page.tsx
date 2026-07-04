@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import AdminSignalStatus from "@/components/admin/AdminSignalStatus";
 import type { SignalRow } from "@/lib/supabase/types";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +69,9 @@ export default async function AdminSignalsPage() {
                 <td className="px-2 py-3 text-muted tabular-nums">
                   {s.confidence !== null ? `${Math.round(s.confidence * 100)}%` : "—"}
                 </td>
-                <td className="px-2 py-3 text-muted capitalize">{s.status}</td>
+                <td className="px-2 py-3">
+                  <AdminSignalStatus signalId={s.id} status={s.status} />
+                </td>
                 <td className="px-2 py-3 text-muted">{fmtDate(s.created_at)}</td>
               </tr>
             ))}

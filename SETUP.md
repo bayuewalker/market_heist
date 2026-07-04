@@ -25,6 +25,7 @@ migrations **in order**:
 10. [`supabase/migrations/0010_character_configs.sql`](./supabase/migrations/0010_character_configs.sql)
 11. [`supabase/migrations/0011_telegram.sql`](./supabase/migrations/0011_telegram.sql)
 12. [`supabase/migrations/0012_missions_points_rank.sql`](./supabase/migrations/0012_missions_points_rank.sql)
+13. [`supabase/migrations/0013_signal_engine_v2.sql`](./supabase/migrations/0013_signal_engine_v2.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -200,6 +201,25 @@ column.
 
 Admins manage the catalog and adjust points manually (with a required
 reason, audit-logged) on `/admin/missions`.
+
+### Signal Engine v2 + Signal Archive
+
+Migration `0013` widens `signals` to the full 8-state lifecycle
+(`pending/active/hit_tp1/hit_tp2/hit_tp3/invalidated/expired/manual_closed`)
+and adds `invalidation`/`tp1`/`tp2`/`tp3`/`risk_level`/`setup_reason`/`ai_note`.
+The non-negotiable rule: every signal is archived, including losses and
+invalidated calls — a member can no longer delete a signal, only transition
+its status, and a guard trigger blocks any updater (member or admin) from
+rewriting entry/stop/tp*/rationale after the fact.
+
+`/dashboard/signals` filters by status (All / Active / Wins / Losses /
+Closed) — the archive is a filtered view over the same table, not a separate
+one. Members self-track outcomes via `SignalActions`; admins can force a
+transition on `/admin/signals`. Either path writes a `signal_updates` row
+(lifecycle history) alongside the status change.
+
+The active Playmaker persona's `signal_prefix` (migration `0010`) is
+prepended to each generated signal's `ai_note`.
 
 ### Reward ledger (commission import)
 

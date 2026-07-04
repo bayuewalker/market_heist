@@ -1,4 +1,4 @@
-import type { SignalBias } from "@/lib/supabase/types";
+import type { RiskLevel, SignalBias } from "@/lib/supabase/types";
 
 const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const DEFAULT_MODEL = "meta/llama-3.3-70b-instruct";
@@ -19,14 +19,21 @@ export type SignalInput = {
 export type GeneratedSignal = {
   bias: SignalBias;
   entry: number | null;
-  target: number | null;
   stop: number | null;
+  invalidation: number | null;
+  tp1: number | null;
+  tp2: number | null;
+  tp3: number | null;
+  riskLevel: RiskLevel | null;
   confidence: number | null;
   technique: string;
+  setupReason: string;
+  aiNote: string;
   rationale: string;
 };
 
 const BIASES: SignalBias[] = ["long", "short", "neutral"];
+const RISK_LEVELS: RiskLevel[] = ["low", "medium", "high"];
 
 function toNumberOrNull(value: unknown): number | null {
   const n = typeof value === "string" ? Number(value.replace(/[^0-9.\-]/g, "")) : Number(value);
@@ -79,10 +86,14 @@ export async function generateSignal(input: SignalInput): Promise<GeneratedSigna
   const system =
     "You are Mentor Heister, a tactical AI market analyst for the Market Heist community. " +
     "You produce educational technical-analysis signals using the FIBOLUTION technique. " +
-    "You never promise profit and never claim certainty. " +
+    "You never promise profit and never claim certainty. Every signal must include reasoning and " +
+    "an invalidation level — never omit them. " +
     "Respond with ONLY a strict JSON object, no markdown, using exactly these keys: " +
-    'bias (one of "long", "short", "neutral"), entry (number), target (number), stop (number), ' +
-    "confidence (number between 0 and 1), technique (string), rationale (string, max 55 words).";
+    'bias (one of "long", "short", "neutral"), entry (number), stop (number), invalidation (number, ' +
+    "the price level at which the idea is structurally wrong), tp1, tp2, tp3 (numbers, take-profit " +
+    'levels in order), risk_level (one of "low", "medium", "high"), confidence (number between 0 and 1), ' +
+    "technique (string), setup_reason (string, max 40 words, the structural/technical reason for the " +
+    "setup), ai_note (string, max 30 words, a short mentor tip), rationale (string, max 55 words).";
 
   const liveBlock = input.live
     ? `Live market data (use these to anchor your levels):\n` +
@@ -97,7 +108,8 @@ export async function generateSignal(input: SignalInput): Promise<GeneratedSigna
     `Timeframe: ${input.timeframe ?? "4H"}\n` +
     `Trader notes: ${input.notes || "none"}\n` +
     liveBlock +
-    "\nGive one educational signal. Entry/target/stop must be consistent with the current price when provided. Keep the rationale concise and risk-aware.";
+    "\nGive one educational signal. Entry/stop/invalidation/tp1-3 must be consistent with the current " +
+    "price when provided. Keep the rationale concise and risk-aware.";
 
   const response = await fetch(NVIDIA_URL, {
     method: "POST",
@@ -127,15 +139,22 @@ export async function generateSignal(input: SignalInput): Promise<GeneratedSigna
   const parsed = extractJson(content);
 
   const rawBias = String(parsed.bias ?? "neutral").toLowerCase() as SignalBias;
+  const rawRisk = String(parsed.risk_level ?? "").toLowerCase() as RiskLevel;
   const confidence = toNumberOrNull(parsed.confidence);
 
   return {
     bias: BIASES.includes(rawBias) ? rawBias : "neutral",
     entry: toNumberOrNull(parsed.entry),
-    target: toNumberOrNull(parsed.target),
     stop: toNumberOrNull(parsed.stop),
+    invalidation: toNumberOrNull(parsed.invalidation),
+    tp1: toNumberOrNull(parsed.tp1),
+    tp2: toNumberOrNull(parsed.tp2),
+    tp3: toNumberOrNull(parsed.tp3),
+    riskLevel: RISK_LEVELS.includes(rawRisk) ? rawRisk : null,
     confidence: confidence === null ? null : Math.min(1, Math.max(0, confidence)),
     technique: String(parsed.technique || "FIBOLUTION").slice(0, 60),
+    setupReason: String(parsed.setup_reason || "").slice(0, 300),
+    aiNote: String(parsed.ai_note || "").slice(0, 200),
     rationale: String(parsed.rationale || "").slice(0, 600),
   };
 }

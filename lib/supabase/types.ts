@@ -5,7 +5,16 @@
  */
 
 export type SignalBias = "long" | "short" | "neutral";
-export type SignalStatus = "active" | "closed";
+export type SignalStatus =
+  | "pending"
+  | "active"
+  | "hit_tp1"
+  | "hit_tp2"
+  | "hit_tp3"
+  | "invalidated"
+  | "expired"
+  | "manual_closed";
+export type RiskLevel = "low" | "medium" | "high";
 export type MarketKind = "crypto" | "forex" | "commodity";
 
 export type PlanRow = {
@@ -59,12 +68,26 @@ export type SignalRow = {
   timeframe: string | null;
   bias: SignalBias;
   entry: number | null;
-  target: number | null;
   stop: number | null;
+  invalidation: number | null;
+  tp1: number | null;
+  tp2: number | null;
+  tp3: number | null;
+  risk_level: RiskLevel | null;
   confidence: number | null;
   technique: string | null;
+  setup_reason: string | null;
+  ai_note: string | null;
   rationale: string | null;
   status: SignalStatus;
+  created_at: string;
+};
+
+export type SignalUpdateRow = {
+  id: string;
+  signal_id: string;
+  update_text: string | null;
+  status_change: string | null;
   created_at: string;
 };
 
@@ -267,6 +290,12 @@ export type Database = {
         Insert: Omit<SignalRow, "id" | "created_at"> &
           Partial<Pick<SignalRow, "id" | "created_at">>;
         Update: Partial<SignalRow>;
+        Relationships: [];
+      };
+      signal_updates: {
+        Row: SignalUpdateRow;
+        Insert: Omit<SignalUpdateRow, "id" | "created_at"> & Partial<Pick<SignalUpdateRow, "id" | "created_at">>;
+        Update: Partial<SignalUpdateRow>;
         Relationships: [];
       };
       payments: {
