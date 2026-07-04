@@ -64,6 +64,10 @@ In the Vercel project → **Settings → Environment Variables**, add:
 | `TRONGRID_API_KEY` | TronGrid API key | Optional (raises rate limits) |
 | `CRON_SECRET` | long random string | Recommended — protects the payment + trend-update crons |
 | `NEXT_PUBLIC_MENTORING_LINK` | your Telegram/Zoom/Discord link | Optional — "Join session" target on `/dashboard/mentoring` |
+| `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` | Public — used to build deep links in bot messages |
+| `TELEGRAM_BOT_TOKEN` | your bot token from @BotFather | **Secret** — server only |
+| `TELEGRAM_BOT_USERNAME` | your bot's username (no `@`) | Public — used to build the `/start` deep link |
+| `TELEGRAM_WEBHOOK_SECRET` | long random string | **Secret** — Telegram echoes this back on every webhook call; the route rejects requests where it doesn't match |
 
 Find the Supabase keys in **Project Settings → API**. After saving, **redeploy**.
 
@@ -139,6 +143,34 @@ is **The Playmaker** (migration `0010`). Only one row is expected to be
 `is_active` at a time — the app reads "the active config" (e.g. the dashboard
 overview's Playmaker Note card); toggling a second row active is an admin
 mistake to avoid, not something the schema blocks.
+
+### Telegram Bot + identity linking
+
+Auth stays Supabase email/password — Telegram is an acquisition and
+notification channel, not a login replacement. A member links Telegram from
+`/dashboard/account` ("Link Telegram" under the Telegram section): the
+dashboard requests a short-lived one-time code, deep-links to
+`https://t.me/<bot>?start=<code>`, and the bot's `/start` handler consumes
+the code to create a `telegram_links` row.
+
+To wire up the bot:
+
+1. Create a bot with [@BotFather](https://t.me/BotFather); set
+   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME`.
+2. Set `TELEGRAM_WEBHOOK_SECRET` to a long random string, then register the
+   webhook (once, after deploying):
+   ```bash
+   curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook" \
+     -d "url=$NEXT_PUBLIC_APP_URL/api/telegram/webhook" \
+     -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
+   ```
+3. Commands: `/start`, `/help`, `/brokers`, `/profile`, `/rank`, `/mission`,
+   `/signal`. `/rank` and `/mission` are placeholders until Missions/Heist
+   Points ship — they already resolve linked-user identity so no further
+   wiring is needed once those tables exist.
+
+All bot interactions are logged to `bot_events`; every webhook request must
+carry the matching `X-Telegram-Bot-Api-Secret-Token` header or it's rejected.
 
 ### Reward ledger (commission import)
 
