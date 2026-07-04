@@ -10,6 +10,10 @@ export async function resolvePostLoginPath(
   supabase: SupabaseClient<Database>,
   userId: string,
 ): Promise<"/admin" | "/dashboard"> {
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  const { data: profile, error } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
+  if (error) {
+    console.error("resolvePostLoginPath: profile role lookup failed", error);
+    return "/dashboard";
+  }
   return profile?.role === "admin" ? "/admin" : "/dashboard";
 }

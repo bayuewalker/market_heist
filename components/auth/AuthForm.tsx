@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { resolvePostLoginPath } from "@/lib/post-login-redirect";
+import { safeRedirect } from "@/lib/safe-redirect";
 import Button from "@/components/ui/Button";
 import TelegramLoginButton from "./TelegramLoginButton";
 
@@ -26,21 +27,13 @@ const TELEGRAM_ERROR_MESSAGES: Record<string, string> = {
 const inputClass =
   "w-full rounded-lg border border-border-subtle bg-background/60 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted/70 transition-colors focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/30";
 
-/**
- * Only allow redirects to internal, single-slash paths to avoid open-redirect
- * navigation (e.g. "//evil.example" or "/\\evil.example").
- */
-function safeRedirect(target: string | null): string {
-  if (!target || !target.startsWith("/")) return "/dashboard";
-  if (target.startsWith("//") || target.startsWith("/\\")) return "/dashboard";
-  return target;
-}
-
 export default function AuthForm({ mode, telegramBotUsername }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const explicitRedirect = searchParams.get("redirect");
-  const redirectTo = safeRedirect(explicitRedirect);
+  // `null` means "no explicit redirect" — an unsafe/invalid `redirect` param
+  // is treated the same as absent, never as if it were a valid explicit target.
+  const explicitRedirect = safeRedirect(searchParams.get("redirect"));
+  const redirectTo = explicitRedirect ?? "/dashboard";
   const refCode = searchParams.get("ref")?.trim().toLowerCase().slice(0, 32) || undefined;
   const telegramError = searchParams.get("telegram_error");
 
