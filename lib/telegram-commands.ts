@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-import { appUrl, sendTelegramMessage, type InlineButton } from "@/lib/telegram";
+import { appUrl, escapeTelegramHtml, sendTelegramMessage, type InlineButton } from "@/lib/telegram";
 
 type TelegramFrom = { id: number; username?: string; first_name?: string };
 
@@ -36,7 +36,7 @@ const DASHBOARD_BUTTONS: InlineButton[] = [
 
 async function handleStart(admin: SupabaseClient<Database>, from: TelegramFrom, code: string | undefined) {
   const persona = await getPersona(admin);
-  const intro = persona?.bot_intro_message || "Welcome to MARKET HEIST.";
+  const intro = escapeTelegramHtml(persona?.bot_intro_message || "Welcome to MARKET HEIST.");
 
   if (code) {
     const { data: linkCode } = await admin
@@ -64,13 +64,26 @@ async function handleStart(admin: SupabaseClient<Database>, from: TelegramFrom, 
       .eq("user_id", linkCode.user_id)
       .maybeSingle();
     if (!existingForUser) {
-      await admin.from("telegram_links").insert({
+      const { error: linkErr } = await admin.from("telegram_links").insert({
         user_id: linkCode.user_id,
         telegram_id: from.id,
         telegram_username: from.username ?? null,
       });
+      if (linkErr) {
+        return sendTelegramMessage(from.id, "Linking failed on our end — please try again in a moment.");
+      }
     }
-    await admin.from("telegram_link_codes").update({ consumed_at: new Date().toISOString() }).eq("id", linkCode.id);
+
+    const { error: consumeErr } = await admin
+      .from("telegram_link_codes")
+      .update({ consumed_at: new Date().toISOString() })
+      .eq("id", linkCode.id);
+    if (consumeErr) {
+      // The link itself succeeded (or already existed) — the code just
+      // stays reusable until it expires, which is a minor inconvenience,
+      // not a broken link. Still tell the user they're linked.
+      console.error("Failed to mark telegram_link_code consumed:", consumeErr.message);
+    }
 
     return sendTelegramMessage(from.id, `${intro}\n\nYour account is linked. Choose your path:`, {
       buttons: [DASHBOARD_BUTTONS],
@@ -127,11 +140,12 @@ async function handleProfile(admin: SupabaseClient<Database>, from: TelegramFrom
   ]);
 
   const verifiedCount = (brokerAccounts ?? []).filter((a) => a.status === "verified").length;
-  const name = profile?.full_name?.trim() || "Heister";
+  const name = escapeTelegramHtml(profile?.full_name?.trim() || "Heister");
+  const planName = escapeTelegramHtml(plan?.name ?? "Basic");
 
   const lines = [
     `<b>Heister:</b> ${name}`,
-    `<b>Plan:</b> ${plan?.name ?? "Basic"}`,
+    `<b>Plan:</b> ${planName}`,
     `<b>Verified brokers:</b> ${verifiedCount}`,
     `<b>Heist Points / Rank:</b> coming soon`,
   ];
@@ -170,12 +184,12 @@ async function handleSignal(admin: SupabaseClient<Database>, from: TelegramFrom)
 
   const lines = [
     "<b>MARKET HEIST SIGNAL ALERT</b>",
-    `Pair: ${signal.pair}`,
-    `Bias: ${signal.bias}`,
+    `Pair: ${escapeTelegramHtml(signal.pair)}`,
+    `Bias: ${escapeTelegramHtml(signal.bias)}`,
     signal.entry !== null ? `Entry: ${signal.entry}` : null,
     signal.target !== null ? `Target: ${signal.target}` : null,
     signal.stop !== null ? `Stop: ${signal.stop}` : null,
-    signal.rationale ? `\n${signal.rationale}` : null,
+    signal.rationale ? `\n${escapeTelegramHtml(signal.rationale)}` : null,
   ].filter(Boolean);
   return sendTelegramMessage(from.id, lines.join("\n"), {
     buttons: [[{ text: "Open full analysis", url: appUrl("/dashboard/signals") }]],
@@ -183,9 +197,10 @@ async function handleSignal(admin: SupabaseClient<Database>, from: TelegramFrom)
 }
 
 /**
- * Routes a Telegram command to its handler. Returns the event_type used for
- * `bot_events` logging, and the resolved user_id (if the sender is linked)
- * so the caller can attach it to the log row.
+ * Routes a Telegram command to its handler and returns the event_type used
+ * for `bot_events` logging. The caller resolves the sender's user_id (if
+ * linked) separately, via its own `telegram_links` lookup, to attach to the
+ * log row — this function doesn't return it.
  */
 export async function handleTelegramCommand(
   admin: SupabaseClient<Database>,

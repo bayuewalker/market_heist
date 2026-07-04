@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -8,8 +9,10 @@ export const dynamic = "force-dynamic";
 
 const CODE_TTL_MS = 15 * 60_000;
 
+// /start <code> is a public entry point, so the code must not be guessable
+// within its TTL — 16 bytes (128 bits) of CSPRNG output, hex-encoded.
 function randomCode(): string {
-  return Array.from({ length: 8 }, () => Math.floor(Math.random() * 36).toString(36)).join("");
+  return randomBytes(16).toString("hex");
 }
 
 export async function POST() {

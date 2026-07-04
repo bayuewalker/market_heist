@@ -9,6 +9,17 @@ import type { Database } from "@/lib/supabase/types";
 
 export type InlineButton = { text: string; url: string };
 
+/**
+ * Escapes Telegram's three HTML-mode reserved characters
+ * (https://core.telegram.org/bots/api#html-style) in dynamic content before
+ * it's interpolated into a `parse_mode: "HTML"` message. Without this, a
+ * value containing `<`, `>`, or `&` (a signal rationale, a display name, a
+ * persona tagline) can break message formatting or inject unintended tags.
+ */
+export function escapeTelegramHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function apiBase() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("TELEGRAM_BOT_TOKEN is not configured.");

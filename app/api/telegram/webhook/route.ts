@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     .eq("telegram_id", from.id)
     .maybeSingle();
 
-  await admin.from("bot_events").insert({
+  const { error: logErr } = await admin.from("bot_events").insert({
     user_id: link?.user_id ?? null,
     event_type: eventType,
     payload: {
@@ -67,6 +67,9 @@ export async function POST(request: Request) {
       error: errorMessage,
     },
   });
+  if (logErr) {
+    console.error("Failed to write bot_events row:", logErr.message);
+  }
 
   // Always 200 — Telegram retries aggressively on non-2xx, which would
   // resend the same command repeatedly for a transient handler error.
