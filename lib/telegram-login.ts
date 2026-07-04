@@ -12,6 +12,23 @@ import { createHash, createHmac, timingSafeEqual } from "crypto";
  * payload can't be reused indefinitely.
  */
 const MAX_AUTH_AGE_SECONDS = 86400; // 24h — Telegram's own recommended staleness bound
+const MAX_FUTURE_SKEW_SECONDS = 60; // tolerate small clock drift, but an auth_date far in the future is never legitimate
+
+/**
+ * Cookie name for the one-time nonce that binds a Telegram Login redirect to
+ * the browser that started it (see `app/api/auth/telegram/nonce/route.ts`).
+ * Telegram's HMAC signature only proves Telegram issued the payload, not
+ * that the browser presenting it is the one the user authorized from — a
+ * captured/leaked callback URL could otherwise be replayed on a different
+ * device within the freshness window to hijack a session.
+ */
+export const TELEGRAM_LOGIN_STATE_COOKIE = "tg_login_state";
+
+export function timingSafeEqualStrings(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+}
 
 export type TelegramLoginPayload = {
   id: number;
@@ -33,7 +50,7 @@ export function verifyTelegramLoginPayload(params: URLSearchParams): TelegramLog
 
   const entries: string[] = [];
   for (const [key, value] of params.entries()) {
-    if (key === "hash") continue;
+    if (key === "hash" || key === "state") continue;
     entries.push(`${key}=${value}`);
   }
   entries.sort();
@@ -41,14 +58,12 @@ export function verifyTelegramLoginPayload(params: URLSearchParams): TelegramLog
 
   const secretKey = createHash("sha256").update(token).digest();
   const computedHash = createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
-
-  const a = Buffer.from(computedHash, "hex");
-  const b = Buffer.from(hash, "hex");
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  if (!/^[0-9a-f]+$/i.test(hash) || !timingSafeEqualStrings(computedHash, hash.toLowerCase())) return null;
 
   const authDateNum = Number(authDate);
   if (!Number.isFinite(authDateNum)) return null;
-  if (Date.now() / 1000 - authDateNum > MAX_AUTH_AGE_SECONDS) return null;
+  const ageSeconds = Date.now() / 1000 - authDateNum;
+  if (ageSeconds > MAX_AUTH_AGE_SECONDS || ageSeconds < -MAX_FUTURE_SKEW_SECONDS) return null;
 
   const idNum = Number(id);
   if (!Number.isFinite(idNum)) return null;

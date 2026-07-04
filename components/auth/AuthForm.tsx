@@ -16,6 +16,7 @@ type AuthFormProps = {
 
 const TELEGRAM_ERROR_MESSAGES: Record<string, string> = {
   invalid: "That Telegram sign-in link wasn't valid. Please try again.",
+  invalid_state: "That Telegram sign-in link expired or was already used. Please try again.",
   not_linked: "This Telegram account isn't linked to a Market Heist account yet. Log in with email and link Telegram from your dashboard, or sign up if you're new here.",
   no_email: "Couldn't sign you in with Telegram. Please log in with email instead.",
   session_failed: "Couldn't sign you in with Telegram. Please log in with email instead.",

@@ -1,15 +1,12 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyTelegramLoginPayload } from "@/lib/telegram-login";
+import { TELEGRAM_LOGIN_STATE_COOKIE, timingSafeEqualStrings, verifyTelegramLoginPayload } from "@/lib/telegram-login";
 import { writeAuditLog } from "@/lib/rewards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function loginError(request: Request, code: string) {
-  return NextResponse.redirect(new URL(`/login?telegram_error=${code}`, request.url));
-}
 
 /**
  * Telegram Login Widget callback (`data-auth-url`) — Telegram redirects the
@@ -22,19 +19,48 @@ function loginError(request: Request, code: string) {
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const cookieStore = await cookies();
+  const expectedState = cookieStore.get(TELEGRAM_LOGIN_STATE_COOKIE)?.value;
+
+  // The nonce cookie is single-use regardless of outcome, so every response
+  // path below goes through this helper rather than a bare redirect.
+  function respond(path: string) {
+    const res = NextResponse.redirect(new URL(path, request.url));
+    res.cookies.delete(TELEGRAM_LOGIN_STATE_COOKIE);
+    return res;
+  }
+  function loginError(code: string) {
+    return respond(`/login?telegram_error=${code}`);
+  }
+
+  // Telegram's HMAC signature only proves Telegram issued this payload, not
+  // that this browser is the one the user authorized from — without this
+  // check, a captured/leaked callback URL could be replayed on a different
+  // device within the payload's freshness window to hijack a session.
+  const providedState = url.searchParams.get("state");
+  if (!expectedState || !providedState || !timingSafeEqualStrings(expectedState, providedState)) {
+    return loginError("invalid_state");
+  }
+
   const payload = verifyTelegramLoginPayload(url.searchParams);
-  if (!payload) return loginError(request, "invalid");
+  if (!payload) return loginError("invalid");
 
   const admin = createAdminClient();
-  const { data: link } = await admin
+  const { data: link, error: linkLookupError } = await admin
     .from("telegram_links")
     .select("user_id")
     .eq("telegram_id", payload.id)
     .maybeSingle();
-  if (!link) return loginError(request, "not_linked");
+  if (linkLookupError) return loginError("session_failed");
+  if (!link) return loginError("not_linked");
 
-  const { data: profile } = await admin.from("profiles").select("email").eq("id", link.user_id).maybeSingle();
-  if (!profile?.email) return loginError(request, "no_email");
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("email")
+    .eq("id", link.user_id)
+    .maybeSingle();
+  if (profileError) return loginError("session_failed");
+  if (!profile?.email) return loginError("no_email");
 
   // Passwordless sign-in for an already-verified user: mint a one-time magic
   // link server-side (admin API, never exposed to the client), then
@@ -46,11 +72,11 @@ export async function GET(request: Request) {
     email: profile.email,
   });
   const tokenHash = linkData?.properties?.hashed_token;
-  if (linkError || !tokenHash) return loginError(request, "session_failed");
+  if (linkError || !tokenHash) return loginError("session_failed");
 
   const supabase = await createClient();
   const { error: verifyError } = await supabase.auth.verifyOtp({ type: "magiclink", token_hash: tokenHash });
-  if (verifyError) return loginError(request, "session_failed");
+  if (verifyError) return loginError("session_failed");
 
   await writeAuditLog(admin, {
     actorId: link.user_id,
@@ -60,5 +86,5 @@ export async function GET(request: Request) {
     meta: { telegram_id: payload.id },
   });
 
-  return NextResponse.redirect(new URL("/dashboard", request.url));
+  return respond("/dashboard");
 }
