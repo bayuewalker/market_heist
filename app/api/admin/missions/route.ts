@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { writeAuditLog } from "@/lib/rewards";
+import { MISSION_TRIGGER_TYPES } from "@/lib/missions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
   const missionKey = String(body.mission_key ?? "").trim().toLowerCase();
   const publicName = String(body.public_name ?? "").trim();
   const description = body.description ? String(body.description).trim() : null;
-  const triggerType = String(body.trigger_type ?? "").trim();
+  const triggerType = String(body.trigger_type ?? "").trim().toLowerCase();
   const points = Number(body.points_reward);
 
   if (!MISSION_KEY_PATTERN.test(missionKey)) {
@@ -39,8 +40,11 @@ export async function POST(request: Request) {
   if (!publicName) {
     return NextResponse.json({ error: "public_name is required." }, { status: 400 });
   }
-  if (!triggerType) {
-    return NextResponse.json({ error: "trigger_type is required." }, { status: 400 });
+  if (!MISSION_TRIGGER_TYPES.includes(triggerType as (typeof MISSION_TRIGGER_TYPES)[number])) {
+    return NextResponse.json(
+      { error: `trigger_type must be one of: ${MISSION_TRIGGER_TYPES.join(", ")}.` },
+      { status: 400 },
+    );
   }
   if (!Number.isFinite(points) || points < 0) {
     return NextResponse.json({ error: "Invalid points_reward." }, { status: 400 });

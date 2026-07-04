@@ -8,8 +8,13 @@ import Button from "@/components/ui/Button";
 const fieldClass =
   "w-full rounded-lg border border-border-subtle bg-background/60 px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted/70 transition-colors focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/30";
 
+// Mirrors lib/missions.ts's MISSION_TRIGGER_TYPES — the only trigger_types
+// isMissionSatisfied() actually recognizes. There's deliberately no "manual"
+// option: a mission created with an unrecognized trigger would sit
+// permanently pending in every member's mission list, since nothing would
+// ever mark it completed. Manual point awards go through the separate admin
+// points-adjustment flow instead.
 const TRIGGER_TYPES = [
-  { value: "manual", label: "Manual (admin awards it)" },
   { value: "complete_profile", label: "Complete profile" },
   { value: "join_telegram", label: "Link Telegram" },
   { value: "login_dashboard", label: "Log in to dashboard" },

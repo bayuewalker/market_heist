@@ -2,6 +2,23 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
 /**
+ * Every trigger_type isMissionSatisfied() below actually recognizes. A
+ * mission created with any other value would sit permanently pending —
+ * there's no "manual" case, since manual point awards go through the
+ * separate admin points-adjustment flow, not the mission/claim system.
+ */
+export const MISSION_TRIGGER_TYPES = [
+  "complete_profile",
+  "join_telegram",
+  "login_dashboard",
+  "submit_broker_uid",
+  "uid_verified",
+  "read_first_signal",
+  "complete_risk_profile",
+  "refer_member",
+] as const;
+
+/**
  * Checks each active mission's completion condition for a user and marks any
  * newly-satisfied ones `completed` (sets completed_at). Pull-based — called
  * whenever the member's dashboard/missions page loads, rather than wired

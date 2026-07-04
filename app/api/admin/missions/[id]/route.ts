@@ -74,7 +74,7 @@ export async function DELETE(_request: Request, ctx: { params: Promise<{ id: str
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.from("missions").delete().eq("id", missionId);
+  const { data: deleted, error } = await admin.from("missions").delete().eq("id", missionId).select().maybeSingle();
   if (error) {
     // A foreign-key violation (23503) means members already have user_missions
     // rows against this mission — disabling it (is_active = false) is the
@@ -84,6 +84,9 @@ export async function DELETE(_request: Request, ctx: { params: Promise<{ id: str
         ? "This mission already has member progress against it — disable it instead of deleting."
         : error.message;
     return NextResponse.json({ error: message }, { status: error.code === "23503" ? 409 : 500 });
+  }
+  if (!deleted) {
+    return NextResponse.json({ error: "Mission not found." }, { status: 404 });
   }
 
   await writeAuditLog(admin, {
