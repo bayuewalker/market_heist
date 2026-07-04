@@ -113,6 +113,17 @@ export default function DashboardNav({
             Admin panel
           </Link>
         )}
+
+        {/* The desktop footer below is hidden on mobile (md:flex), so the mobile
+            flyout needs its own account/logout block or there's no way to log
+            out on a phone. */}
+        <div className="mt-2 flex flex-col gap-3 border-t border-border-subtle pt-3 md:hidden">
+          <div className="px-3">
+            <p className="truncate text-sm font-medium text-foreground">{email}</p>
+            <p className="text-xs text-muted">{planName}</p>
+          </div>
+          <LogoutButton />
+        </div>
       </nav>
 
       <div className="mt-auto hidden flex-col gap-3 border-t border-border-subtle pt-4 md:flex">
