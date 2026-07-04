@@ -19,6 +19,7 @@ export type PlanRow = {
 };
 
 export type UserRole = "member" | "admin";
+export type RiskProfile = "conservative" | "moderate" | "aggressive";
 
 export type ProfileRow = {
   id: string;
@@ -27,6 +28,7 @@ export type ProfileRow = {
   plan_id: string;
   plan_expires_at: string | null;
   role: UserRole;
+  risk_profile: RiskProfile | null;
   created_at: string;
 };
 
@@ -200,6 +202,51 @@ export type BotEventRow = {
   created_at: string;
 };
 
+export type MissionRow = {
+  id: string;
+  mission_key: string;
+  public_name: string;
+  description: string | null;
+  points_reward: number;
+  trigger_type: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+export type UserMissionStatus = "pending" | "completed" | "claimed";
+
+export type UserMissionRow = {
+  id: string;
+  user_id: string;
+  mission_id: string;
+  status: UserMissionStatus;
+  completed_at: string | null;
+  claimed_at: string | null;
+};
+
+export type HeistPointsSourceType = "mission" | "manual_adjustment";
+
+export type HeistPointsLedgerRow = {
+  id: string;
+  user_id: string;
+  source_type: HeistPointsSourceType;
+  source_id: string | null;
+  points_delta: number;
+  balance_after: number;
+  reason: string | null;
+  created_at: string;
+};
+
+export type HeisterRankRow = {
+  id: string;
+  name: string;
+  min_points: number | null;
+  rules_json: Record<string, unknown>;
+  active: boolean;
+  sort_order: number;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -337,12 +384,54 @@ export type Database = {
         Update: Partial<BotEventRow>;
         Relationships: [];
       };
+      missions: {
+        Row: MissionRow;
+        Insert: Omit<MissionRow, "id" | "is_active" | "sort_order" | "created_at"> &
+          Partial<Pick<MissionRow, "id" | "is_active" | "sort_order" | "created_at">>;
+        Update: Partial<MissionRow>;
+        Relationships: [];
+      };
+      user_missions: {
+        Row: UserMissionRow;
+        Insert: Omit<UserMissionRow, "id" | "status" | "completed_at" | "claimed_at"> &
+          Partial<Pick<UserMissionRow, "id" | "status" | "completed_at" | "claimed_at">>;
+        Update: Partial<UserMissionRow>;
+        Relationships: [];
+      };
+      heist_points_ledger: {
+        Row: HeistPointsLedgerRow;
+        Insert: Omit<HeistPointsLedgerRow, "id" | "source_id" | "reason" | "created_at"> &
+          Partial<Pick<HeistPointsLedgerRow, "id" | "source_id" | "reason" | "created_at">>;
+        Update: Partial<HeistPointsLedgerRow>;
+        Relationships: [];
+      };
+      heister_ranks: {
+        Row: HeisterRankRow;
+        Insert: Omit<HeisterRankRow, "id" | "rules_json" | "active" | "sort_order"> &
+          Partial<Pick<HeisterRankRow, "id" | "rules_json" | "active" | "sort_order">>;
+        Update: Partial<HeisterRankRow>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
       admin_confirmed_revenue: {
         Args: Record<string, never>;
         Returns: number;
+      };
+      claim_mission: {
+        Args: { p_user_id: string; p_mission_id: string };
+        Returns: HeistPointsLedgerRow;
+      };
+      append_heist_points: {
+        Args: {
+          p_user_id: string;
+          p_source_type: HeistPointsSourceType;
+          p_source_id: string | null;
+          p_points_delta: number;
+          p_reason: string | null;
+        };
+        Returns: HeistPointsLedgerRow;
       };
     };
     Enums: Record<string, never>;

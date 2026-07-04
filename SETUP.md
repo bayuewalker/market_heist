@@ -23,6 +23,8 @@ migrations **in order**:
 8. [`supabase/migrations/0008_broker_station.sql`](./supabase/migrations/0008_broker_station.sql)
 9. [`supabase/migrations/0009_reward_ledger.sql`](./supabase/migrations/0009_reward_ledger.sql)
 10. [`supabase/migrations/0010_character_configs.sql`](./supabase/migrations/0010_character_configs.sql)
+11. [`supabase/migrations/0011_telegram.sql`](./supabase/migrations/0011_telegram.sql)
+12. [`supabase/migrations/0012_missions_points_rank.sql`](./supabase/migrations/0012_missions_points_rank.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -165,12 +167,39 @@ To wire up the bot:
      -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
    ```
 3. Commands: `/start`, `/help`, `/brokers`, `/profile`, `/rank`, `/mission`,
-   `/signal`. `/rank` and `/mission` are placeholders until Missions/Heist
-   Points ship — they already resolve linked-user identity so no further
-   wiring is needed once those tables exist.
+   `/signal`.
 
 All bot interactions are logged to `bot_events`; every webhook request must
 carry the matching `X-Telegram-Bot-Api-Secret-Token` header or it's rejected.
+
+### Missions, Heist Points, Heister Rank
+
+`/dashboard/missions` lists the mission catalog (migration `0012`, seeded per
+the MVP V1 Final Build Module Decision doc — First Contact, Enter The
+Hideout, Enter The Station, Broker Infiltration, Verified Raider, Signal
+Intercept, Recruit Heister, Risk Calibration). Every dashboard page load
+calls `syncMissionCompletions()` (`lib/missions.ts`), which checks each active
+mission's trigger condition for the signed-in user and marks any
+newly-satisfied one `completed` — this is pull-based (checked on page load),
+not wired into every mutation site across earlier milestones (broker verify,
+signal create, etc.).
+
+A completed mission isn't paid out automatically — the member taps **Claim**
+(`POST /api/missions/:id/claim`), which is what actually writes to
+`heist_points_ledger` (append-only, DB-enforced — same guard-trigger pattern
+as `reward_ledger`). Heister Rank is derived from the point total via
+`heister_ranks.min_points` thresholds; Genesis Heister has no point threshold
+(`min_points` is null) — it's campaign-assigned only, tied into Genesis Pass
+eligibility (M11).
+
+"Recruit Heister" can't complete yet — it depends on referral attribution
+(captain/leaderboard system, M11) that doesn't exist. "Risk Calibration"
+completes when a member picks a risk profile (Conservative/Moderate/
+Aggressive) on the missions page, backed by a new `profiles.risk_profile`
+column.
+
+Admins manage the catalog and adjust points manually (with a required
+reason, audit-logged) on `/admin/missions`.
 
 ### Reward ledger (commission import)
 

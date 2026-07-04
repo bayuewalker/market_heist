@@ -1,15 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 import { appUrl, escapeTelegramHtml, sendTelegramMessage, type InlineButton } from "@/lib/telegram";
+import { getPointsBalance, getRankForPoints, syncMissionCompletions } from "@/lib/missions";
 
 type TelegramFrom = { id: number; username?: string; first_name?: string };
 
 const HELP_TEXT = `<b>Market Heist commands</b>
 /start - link your account and see the welcome intro
 /signal - your latest signal
-/mission - mission status (coming soon)
+/mission - mission status
 /brokers - broker referral links
-/rank - your Heister Rank (coming soon)
+/rank - your Heister Rank
 /profile - your account status
 /help - this message`;
 
@@ -142,12 +143,15 @@ async function handleProfile(admin: SupabaseClient<Database>, from: TelegramFrom
   const verifiedCount = (brokerAccounts ?? []).filter((a) => a.status === "verified").length;
   const name = escapeTelegramHtml(profile?.full_name?.trim() || "Heister");
   const planName = escapeTelegramHtml(plan?.name ?? "Basic");
+  const points = await getPointsBalance(admin, userId);
+  const rank = await getRankForPoints(admin, points);
 
   const lines = [
     `<b>Heister:</b> ${name}`,
     `<b>Plan:</b> ${planName}`,
     `<b>Verified brokers:</b> ${verifiedCount}`,
-    `<b>Heist Points / Rank:</b> coming soon`,
+    `<b>Heist Points:</b> ${points} HP`,
+    `<b>Rank:</b> ${escapeTelegramHtml(rank?.name ?? "Rookie Heister")}`,
   ];
   return sendTelegramMessage(from.id, lines.join("\n"));
 }
@@ -155,13 +159,38 @@ async function handleProfile(admin: SupabaseClient<Database>, from: TelegramFrom
 async function handleRank(admin: SupabaseClient<Database>, from: TelegramFrom) {
   const userId = await requireLinked(admin, from);
   if (!userId) return;
-  return sendTelegramMessage(from.id, "Heister Rank is coming soon — missions and points launch shortly. Stay tuned!");
+
+  const points = await getPointsBalance(admin, userId);
+  const rank = await getRankForPoints(admin, points);
+  return sendTelegramMessage(
+    from.id,
+    `<b>Rank:</b> ${escapeTelegramHtml(rank?.name ?? "Rookie Heister")}\n<b>Heist Points:</b> ${points} HP`,
+    { buttons: [[{ text: "View missions", url: appUrl("/dashboard/missions") }]] },
+  );
 }
 
 async function handleMission(admin: SupabaseClient<Database>, from: TelegramFrom) {
   const userId = await requireLinked(admin, from);
   if (!userId) return;
-  return sendTelegramMessage(from.id, "Missions aren't live yet — check back soon for your first objectives.");
+
+  await syncMissionCompletions(admin, userId);
+
+  const [{ data: missions }, { data: userMissions }] = await Promise.all([
+    admin.from("missions").select("id, public_name, points_reward").eq("is_active", true).order("sort_order", { ascending: true }),
+    admin.from("user_missions").select("mission_id, status").eq("user_id", userId),
+  ]);
+  const statusByMission = new Map((userMissions ?? []).map((m) => [m.mission_id, m.status]));
+
+  const claimable = (missions ?? []).filter((m) => statusByMission.get(m.id) === "completed");
+  const lines = [
+    `<b>Missions</b>`,
+    claimable.length > 0
+      ? `${claimable.length} ready to claim: ${claimable.map((m) => escapeTelegramHtml(m.public_name)).join(", ")}`
+      : "Nothing to claim right now — keep going!",
+  ];
+  return sendTelegramMessage(from.id, lines.join("\n"), {
+    buttons: [[{ text: "Open missions", url: appUrl("/dashboard/missions") }]],
+  });
 }
 
 async function handleSignal(admin: SupabaseClient<Database>, from: TelegramFrom) {
