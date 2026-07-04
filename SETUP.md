@@ -226,6 +226,34 @@ To wire up the bot:
 All bot interactions are logged to `bot_events`; every webhook request must
 carry the matching `X-Telegram-Bot-Api-Secret-Token` header or it's rejected.
 
+### Telegram Login (M13, additive sign-in)
+
+An **additional** sign-in method for members who already linked Telegram via
+the flow above — never a replacement for, or a new path around, Supabase
+email/password auth, and it never creates an account. If Telegram's widget
+payload doesn't resolve to an existing `telegram_links` row, the sign-in is
+rejected with a message pointing the user back to email login (or signup).
+
+The widget renders on `/login` and the landing page whenever both
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` are set — no extra env vars
+needed. One extra one-time setup step beyond the bot config above:
+
+1. Message [@BotFather](https://t.me/BotFather) with `/setdomain` and give it
+   your deployed domain (e.g. `your-app.vercel.app`) — the Login Widget
+   silently refuses to render on any domain not registered this way.
+
+How it works: `components/auth/TelegramLoginButton.tsx` renders Telegram's
+official widget in `data-auth-url` (redirect) mode, pointing at
+`GET /api/auth/telegram`. That route (`lib/telegram-login.ts` +
+`app/api/auth/telegram/route.ts`) verifies the payload's HMAC-SHA256 hash
+(keyed by `SHA256(bot token)`, per [Telegram's own spec](https://core.telegram.org/widgets/login#checking-authorization))
+and rejects anything older than 24h, looks up the matching `telegram_links`
+row, then mints a one-time magic link server-side via the Supabase admin API
+and immediately redeems it against the request's cookie-bound client — the
+resulting session is issued exactly the same way the email/password path
+issues one (no custom session/cookie scheme). Successful logins are recorded
+in `audit_logs` (action `auth.telegram_login`).
+
 ### Missions, Heist Points, Heister Rank
 
 `/dashboard/missions` lists the mission catalog (migration `0012`, seeded per
@@ -452,7 +480,7 @@ MVP V1 launched.
 
 | Criterion | Status | Where |
 | --- | --- | --- |
-| User can register/login with Telegram | NEEDS MANUAL VERIFICATION | `/login` supports email/password today; Telegram Login (M13, issue #26) is a separate, deferred milestone — see below |
+| User can register/login with Telegram | PASS (code) / NEEDS MANUAL VERIFICATION (live bot + BotFather domain) | `/login` + landing page, `app/api/auth/telegram/route.ts` (M13) — additive to email/password, only for already-linked accounts (see below) |
 | Telegram Bot can onboard users | PASS (code) / NEEDS MANUAL VERIFICATION (live bot) | `app/api/telegram/webhook/route.ts`, `lib/telegram.ts` — needs a real `TELEGRAM_BOT_TOKEN` + webhook to confirm end-to-end |
 | User can access dashboard | PASS | `/dashboard`, gated by `createClient()` + Supabase Auth session |
 | User can open broker referral link | PASS | `/dashboard/brokers`, `brokers.referral_base_url` |
@@ -475,8 +503,10 @@ MVP V1 launched.
 
 ### M13 · Telegram Login
 
-Blueprint §15 lists Telegram login as an acceptance criterion, but
-`WORKING_PLAN.md` scopes it as **M13 (issue #26), P2/deferred** — a
-separate milestone from the Telegram *bot* linking already shipped in M7.
-Today, `/login` is email/password only; Telegram OAuth as a login method is
-tracked and built separately, not part of M12's scope.
+Blueprint §15 lists Telegram login as an acceptance criterion; `WORKING_PLAN.md`
+scoped it as **M13 (issue #26), P2/deferred** — a separate milestone from the
+Telegram *bot* linking shipped in M7 — and it has now shipped (see the
+"Telegram Login" section above). `/login` and the landing page both render
+the widget once the bot is configured; email/password remains fully
+functional and primary, and Telegram Login only ever signs in an account
+that already linked Telegram via M7 — it never registers a new one.

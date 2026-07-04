@@ -8,6 +8,7 @@ import Container from "./ui/Container";
 import HeroVisual from "./HeroVisual";
 import BackgroundFX from "./BackgroundFX";
 import VideoModal from "./VideoModal";
+import TelegramLoginButton from "./auth/TelegramLoginButton";
 
 const tickerItems = [
   "BTC/USDT",
@@ -26,7 +27,7 @@ const stats = [
   { value: "2%", label: "Donated to kids" },
 ];
 
-export default function Hero() {
+export default function Hero({ telegramBotUsername }: { telegramBotUsername?: string }) {
   const [demoOpen, setDemoOpen] = useState(false);
 
   return (
@@ -81,6 +82,17 @@ export default function Hero() {
               </div>
             ))}
           </dl>
+
+          {telegramBotUsername && (
+            <div className="mt-6 flex flex-col items-center gap-2 lg:items-start">
+              <p className="text-xs text-muted">Already have a linked Telegram? Sign in instantly:</p>
+              <TelegramLoginButton
+                botUsername={telegramBotUsername}
+                authUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/api/auth/telegram`}
+                size="medium"
+              />
+            </div>
+          )}
         </motion.div>
 
         <motion.div
