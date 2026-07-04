@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import type { MissionRow } from "@/lib/supabase/types";
 
 export default function AdminMissionRow({ mission }: { mission: MissionRow }) {
   const router = useRouter();
   const [points, setPoints] = useState(String(mission.points_reward));
-  const [saving, setSaving] = useState<"active" | "points" | null>(null);
+  const [saving, setSaving] = useState<"active" | "points" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function update(body: Record<string, unknown>, kind: "active" | "points") {
@@ -26,6 +26,21 @@ export default function AdminMissionRow({ mission }: { mission: MissionRow }) {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Update failed.");
     } finally {
+      setSaving(null);
+    }
+  }
+
+  async function onDelete() {
+    if (!window.confirm(`Delete "${mission.public_name}"? This can't be undone.`)) return;
+    setSaving("delete");
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/missions/${mission.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Delete failed.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed.");
       setSaving(null);
     }
   }
@@ -68,6 +83,21 @@ export default function AdminMissionRow({ mission }: { mission: MissionRow }) {
         >
           {saving === "active" && <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />}
           {mission.is_active ? "Active" : "Disabled"}
+        </button>
+      </td>
+      <td className="px-2 py-3">
+        <button
+          type="button"
+          disabled={saving !== null}
+          onClick={onDelete}
+          aria-label={`Delete ${mission.public_name}`}
+          className="inline-flex items-center justify-center rounded-lg p-1.5 text-muted transition-colors hover:bg-rose-500/10 hover:text-rose-300 disabled:opacity-50"
+        >
+          {saving === "delete" ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
         </button>
       </td>
     </tr>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import AdminMissionRow from "@/components/admin/AdminMissionRow";
+import CreateMissionForm from "@/components/admin/CreateMissionForm";
 import PointsAdjustForm from "@/components/admin/PointsAdjustForm";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,9 @@ export default async function AdminMissionsPage() {
               <th className="px-2 py-3 font-medium">Trigger</th>
               <th className="px-2 py-3 font-medium">Points</th>
               <th className="px-2 py-3 font-medium">Status</th>
+              <th className="px-2 py-3 font-medium">
+                <span className="sr-only">Delete</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -34,6 +38,7 @@ export default async function AdminMissionsPage() {
         </table>
       </div>
 
+      <CreateMissionForm />
       <PointsAdjustForm />
     </div>
   );
