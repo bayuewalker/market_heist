@@ -68,6 +68,7 @@ export default function FooterCTA() {
               { href: "/terms", label: "Terms" },
               { href: "/privacy", label: "Privacy" },
               { href: "/risk", label: "Risk" },
+              { href: "/trust", label: "Trust" },
             ].map((link) => (
               <a
                 key={link.href}

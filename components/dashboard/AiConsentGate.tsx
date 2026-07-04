@@ -70,8 +70,11 @@ export default function AiConsentGate() {
       </Button>
 
       <p className="text-xs text-muted">
-        A full breakdown of how your data is used will be published on the Trust pages. You can ask to stop
-        using Mentor at any time.
+        A full breakdown of how your data is used is published on our{" "}
+        <a href="/ai-data-consent" className="text-accent-strong underline">
+          AI Data Consent
+        </a>{" "}
+        page. You can ask to stop using Mentor at any time.
       </p>
     </div>
   );

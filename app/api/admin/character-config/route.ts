@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { writeAuditLog } from "@/lib/rewards";
 import type { CharacterConfigRow } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -77,6 +78,14 @@ export async function PATCH(request: Request) {
   if (error || !updated) {
     return NextResponse.json({ error: error?.message ?? "Update failed." }, { status: 500 });
   }
+
+  await writeAuditLog(admin, {
+    actorId: user.id,
+    action: "character_config.update",
+    targetType: "character_config",
+    targetId: id,
+    meta: update,
+  });
 
   return NextResponse.json({ character_config: updated });
 }
