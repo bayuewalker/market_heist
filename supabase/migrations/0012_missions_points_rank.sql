@@ -82,6 +82,16 @@ create table if not exists public.heist_points_ledger (
 
 create index if not exists heist_points_ledger_user_idx on public.heist_points_ledger (user_id, created_at desc);
 
+alter table public.heist_points_ledger
+  drop constraint if exists heist_points_ledger_manual_adjustment_reason_check,
+  add constraint heist_points_ledger_manual_adjustment_reason_check
+    check (source_type != 'manual_adjustment' or reason is not null);
+
+alter table public.heist_points_ledger
+  drop constraint if exists heist_points_ledger_mission_source_id_check,
+  add constraint heist_points_ledger_mission_source_id_check
+    check (source_type != 'mission' or source_id is not null);
+
 alter table public.heist_points_ledger enable row level security;
 
 drop policy if exists "read own heist points" on public.heist_points_ledger;
@@ -114,6 +124,90 @@ drop trigger if exists heist_points_ledger_guard_delete on public.heist_points_l
 create trigger heist_points_ledger_guard_delete
   before delete on public.heist_points_ledger
   for each row execute function public.guard_heist_points_ledger_immutable_fields();
+
+-- ---------------------------------------------------------------------------
+-- append_heist_points: the only writer of heist_points_ledger. Takes a
+-- per-user advisory xact lock before reading the latest balance, so
+-- concurrent claims/adjustments for the same user serialize instead of
+-- racing on balance_after (lost-update). security definer + service-role-only
+-- grant, since it must run under RLS-bypassing privileges the same as the
+-- rest of this table's writes.
+-- ---------------------------------------------------------------------------
+create or replace function public.append_heist_points(
+  p_user_id uuid,
+  p_source_type text,
+  p_source_id uuid,
+  p_points_delta integer,
+  p_reason text
+)
+returns public.heist_points_ledger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_balance integer;
+  v_row public.heist_points_ledger;
+begin
+  perform pg_advisory_xact_lock(hashtext(p_user_id::text));
+
+  select balance_after into v_balance
+    from public.heist_points_ledger
+    where user_id = p_user_id
+    order by created_at desc
+    limit 1;
+
+  if coalesce(v_balance, 0) + p_points_delta < 0 then
+    raise exception 'Adjustment would bring the balance below zero.';
+  end if;
+
+  insert into public.heist_points_ledger (user_id, source_type, source_id, points_delta, balance_after, reason)
+  values (p_user_id, p_source_type, p_source_id, p_points_delta, coalesce(v_balance, 0) + p_points_delta, p_reason)
+  returning * into v_row;
+
+  return v_row;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- claim_mission: atomically flips a completed mission to claimed and appends
+-- its points to the ledger in one transaction. If the ledger append fails,
+-- the whole transaction (including the status flip) rolls back, so a mission
+-- can never get stuck "claimed" with no points awarded.
+-- ---------------------------------------------------------------------------
+create or replace function public.claim_mission(p_user_id uuid, p_mission_id uuid)
+returns public.heist_points_ledger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_mission public.missions;
+  v_claimed public.user_missions;
+  v_row public.heist_points_ledger;
+begin
+  select * into v_mission from public.missions where id = p_mission_id;
+  if not found then
+    raise exception 'Unknown mission.';
+  end if;
+
+  update public.user_missions
+    set status = 'claimed', claimed_at = now()
+    where user_id = p_user_id
+      and mission_id = p_mission_id
+      and status = 'completed'
+    returning * into v_claimed;
+
+  if not found then
+    raise exception 'This mission isn''t ready to claim yet.';
+  end if;
+
+  select * into v_row
+    from public.append_heist_points(p_user_id, 'mission', p_mission_id, v_mission.points_reward, null);
+
+  return v_row;
+end;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- heister_ranks: thresholds (§12.6). `min_points` is null for campaign-only

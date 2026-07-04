@@ -419,6 +419,20 @@ export type Database = {
         Args: Record<string, never>;
         Returns: number;
       };
+      claim_mission: {
+        Args: { p_user_id: string; p_mission_id: string };
+        Returns: HeistPointsLedgerRow;
+      };
+      append_heist_points: {
+        Args: {
+          p_user_id: string;
+          p_source_type: HeistPointsSourceType;
+          p_source_id: string | null;
+          p_points_delta: number;
+          p_reason: string | null;
+        };
+        Returns: HeistPointsLedgerRow;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

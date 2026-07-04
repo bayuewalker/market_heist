@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getPointsBalance } from "@/lib/missions";
 import { writeAuditLog } from "@/lib/rewards";
 
 export const runtime = "nodejs";
@@ -40,28 +39,27 @@ export async function POST(request: Request) {
   const { data: profile } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
   if (!profile) return NextResponse.json({ error: "No member found with that email." }, { status: 404 });
 
-  const currentBalance = await getPointsBalance(admin, profile.id);
-  const balanceAfter = currentBalance + Math.round(pointsDelta);
-  if (balanceAfter < 0) {
-    return NextResponse.json({ error: "Adjustment would bring the balance below zero." }, { status: 400 });
-  }
+  const roundedDelta = Math.round(pointsDelta);
 
-  const { error } = await admin.from("heist_points_ledger").insert({
-    user_id: profile.id,
-    source_type: "manual_adjustment",
-    points_delta: Math.round(pointsDelta),
-    balance_after: balanceAfter,
-    reason,
+  const { data: row, error } = await admin.rpc("append_heist_points", {
+    p_user_id: profile.id,
+    p_source_type: "manual_adjustment",
+    p_source_id: null,
+    p_points_delta: roundedDelta,
+    p_reason: reason,
   });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    const status = error.message.includes("below zero") ? 400 : 500;
+    return NextResponse.json({ error: error.message }, { status });
+  }
 
   await writeAuditLog(admin, {
     actorId: user.id,
     action: "points.manual_adjustment",
     targetType: "heist_points_ledger",
-    targetId: profile.id,
-    meta: { points_delta: pointsDelta, reason, balance_after: balanceAfter },
+    targetId: row.id,
+    meta: { points_delta: roundedDelta, reason, balance_after: row.balance_after },
   });
 
-  return NextResponse.json({ balance_after: balanceAfter });
+  return NextResponse.json({ balance_after: row.balance_after });
 }

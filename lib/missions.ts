@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, MissionRow } from "@/lib/supabase/types";
+import type { Database } from "@/lib/supabase/types";
 
 /**
  * Checks each active mission's completion condition for a user and marks any
@@ -17,14 +17,15 @@ export async function syncMissionCompletions(admin: SupabaseClient<Database>, us
   const { data: existing } = await admin.from("user_missions").select("mission_id, status").eq("user_id", userId);
   const statusByMission = new Map((existing ?? []).map((r) => [r.mission_id, r.status]));
 
-  const toComplete: MissionRow[] = [];
-  for (const mission of missions) {
+  const pending = missions.filter((mission) => {
     const status = statusByMission.get(mission.id);
-    if (status === "completed" || status === "claimed") continue;
-    if (await isMissionSatisfied(admin, userId, mission.trigger_type)) {
-      toComplete.push(mission);
-    }
-  }
+    return status !== "completed" && status !== "claimed";
+  });
+
+  const satisfied = await Promise.all(
+    pending.map((mission) => isMissionSatisfied(admin, userId, mission.trigger_type)),
+  );
+  const toComplete = pending.filter((_, i) => satisfied[i]);
   if (toComplete.length === 0) return;
 
   const now = new Date().toISOString();
@@ -105,31 +106,13 @@ export async function claimMission(admin: SupabaseClient<Database>, userId: stri
   const { data: mission } = await admin.from("missions").select("*").eq("id", missionId).single();
   if (!mission) return { ok: false, error: "Unknown mission." };
 
-  const { data: claimedRow, error: claimErr } = await admin
-    .from("user_missions")
-    .update({ status: "claimed", claimed_at: new Date().toISOString() })
-    .eq("user_id", userId)
-    .eq("mission_id", missionId)
-    .eq("status", "completed")
-    .select()
-    .maybeSingle();
-
-  if (claimErr) return { ok: false, error: claimErr.message };
-  if (!claimedRow) return { ok: false, error: "This mission isn't ready to claim yet." };
-
-  const currentBalance = await getPointsBalance(admin, userId);
-  const balanceAfter = currentBalance + mission.points_reward;
-
-  const { error: ledgerErr } = await admin.from("heist_points_ledger").insert({
-    user_id: userId,
-    source_type: "mission",
-    source_id: mission.id,
-    points_delta: mission.points_reward,
-    balance_after: balanceAfter,
+  const { data: row, error } = await admin.rpc("claim_mission", {
+    p_user_id: userId,
+    p_mission_id: missionId,
   });
-  if (ledgerErr) return { ok: false, error: ledgerErr.message };
+  if (error) return { ok: false, error: error.message };
 
-  return { ok: true, pointsAwarded: mission.points_reward, balanceAfter };
+  return { ok: true, pointsAwarded: mission.points_reward, balanceAfter: row.balance_after };
 }
 
 export async function getPointsBalance(admin: SupabaseClient<Database>, userId: string): Promise<number> {
