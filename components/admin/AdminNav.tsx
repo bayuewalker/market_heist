@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Menu,
   Radar,
+  Rocket,
   ShieldCheck,
   Trophy,
   Users,
@@ -32,6 +33,7 @@ const items: NavItem[] = [
   { href: "/admin/rewards", label: "Rewards", icon: Coins },
   { href: "/admin/missions", label: "Missions", icon: Trophy },
   { href: "/admin/signals", label: "Signals", icon: Radar },
+  { href: "/admin/genesis", label: "Genesis Pass", icon: Rocket },
   { href: "/admin/payments", label: "Payments", icon: Wallet },
   { href: "/admin/character", label: "Character", icon: UserRound },
 ];

@@ -82,6 +82,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: rowsErr?.message ?? "Could not store commission rows." }, { status: 500 });
   }
 
+  // Batch-resolve which matched members were referred by a captain, so the
+  // per-row allocation split below can credit that captain's reward bucket
+  // (M11) without an N+1 query.
+  const matchedUserIds = [...new Set(matched.map((r) => r.matched_user_id).filter((id): id is string => !!id))];
+  const { data: captainLinks } =
+    matchedUserIds.length > 0
+      ? await admin.from("captain_networks").select("member_id, captain_id").in("member_id", matchedUserIds)
+      : { data: [] };
+  const captainByMember = new Map((captainLinks ?? []).map((c) => [c.member_id, c.captain_id]));
+
   // insertedRows[i] corresponds to matched[i]: this is a single INSERT ...
   // VALUES (...), (...) RETURNING id built from `matched.map(...)` above, and
   // Postgres preserves VALUES-list order in RETURNING for a plain multi-row
@@ -94,6 +104,7 @@ export async function POST(request: Request) {
       matchedPlanId: r.matched_plan_id,
       fees: r.fees,
       backendCommission: r.backend_commission,
+      captainId: r.matched_user_id ? captainByMember.get(r.matched_user_id) ?? null : null,
     }).map((a) => ({
       user_id: a.user_id,
       source_type: "commission_row" as const,

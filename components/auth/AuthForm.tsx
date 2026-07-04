@@ -28,6 +28,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = safeRedirect(searchParams.get("redirect"));
+  const refCode = searchParams.get("ref")?.trim().slice(0, 32) || undefined;
 
   const isSignup = mode === "signup";
   const [fullName, setFullName] = useState("");
@@ -56,7 +57,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName } },
+          options: { data: { full_name: fullName, ref_code: refCode } },
         });
         if (signUpError) throw signUpError;
         if (data.session) {

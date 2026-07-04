@@ -6,7 +6,7 @@ import type { ProfileRow, UserRole } from "@/lib/supabase/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const ROLES: UserRole[] = ["member", "admin"];
+const ROLES: UserRole[] = ["member", "admin", "captain"];
 
 export async function PATCH(request: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id: targetId } = await ctx.params;

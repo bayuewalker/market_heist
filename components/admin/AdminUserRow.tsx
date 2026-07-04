@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, ShieldCheck, ShieldOff } from "lucide-react";
-import type { PlanRow, ProfileRow } from "@/lib/supabase/types";
+import { Loader2 } from "lucide-react";
+import type { PlanRow, ProfileRow, UserRole } from "@/lib/supabase/types";
+
+const ROLE_LABEL: Record<UserRole, string> = { member: "Member", captain: "Captain", admin: "Admin" };
 
 function fmtDate(iso: string | null) {
   if (!iso) return "—";
@@ -68,26 +70,24 @@ export default function AdminUserRow({
       </td>
       <td className="py-3 pr-4 text-sm text-muted">{fmtDate(profile.plan_expires_at)}</td>
       <td className="py-3 pr-4">
-        <button
-          type="button"
+        <select
+          value={profile.role}
           disabled={saving !== null || isSelf}
-          onClick={() => update({ role: profile.role === "admin" ? "member" : "admin" }, "role")}
-          title={isSelf ? "You can't change your own admin role" : undefined}
-          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+          onChange={(e) => update({ role: e.target.value }, "role")}
+          title={isSelf ? "You can't change your own role" : undefined}
+          className={`rounded-lg border px-2.5 py-1.5 text-sm disabled:opacity-50 ${
             profile.role === "admin"
               ? "border-accent/40 bg-accent/10 text-accent-strong"
-              : "border-border-subtle text-muted hover:text-foreground"
+              : "border-border-subtle bg-background/60 text-foreground"
           }`}
         >
-          {saving === "role" ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-          ) : profile.role === "admin" ? (
-            <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-          ) : (
-            <ShieldOff className="h-3.5 w-3.5" aria-hidden="true" />
-          )}
-          {profile.role === "admin" ? "Admin" : "Member"}
-        </button>
+          {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
+            <option key={role} value={role} className="bg-surface">
+              {ROLE_LABEL[role]}
+            </option>
+          ))}
+        </select>
+        {saving === "role" && <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin text-muted" aria-hidden="true" />}
       </td>
       <td className="py-3 text-sm text-muted">{fmtDate(profile.created_at)}</td>
     </tr>

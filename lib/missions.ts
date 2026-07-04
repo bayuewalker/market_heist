@@ -84,10 +84,13 @@ async function isMissionSatisfied(admin: SupabaseClient<Database>, userId: strin
       const { data } = await admin.from("profiles").select("risk_profile").eq("id", userId).single();
       return !!data?.risk_profile;
     }
-    case "refer_member":
-      // Depends on referral attribution (captain_networks / referral_codes),
-      // which ships in M11. Always unsatisfied until then.
-      return false;
+    case "refer_member": {
+      const { count } = await admin
+        .from("captain_networks")
+        .select("id", { count: "exact", head: true })
+        .eq("captain_id", userId);
+      return (count ?? 0) > 0;
+    }
     default:
       return false;
   }
