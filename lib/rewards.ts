@@ -8,12 +8,20 @@ import type { Database, RewardAllocationType } from "@/lib/supabase/types";
  *
  * Member reward is a percentage of the member's OWN trading fee for the
  * period (blueprint §5 "Public Reward" tiers — midpoint of each band).
- * Donation/operation are a percentage of the BACKEND commission Market Heist
- * actually received for that row (blueprint §5 "Backend Pool Allocation").
- * These are two different bases and are not meant to sum to 100% of
- * anything — captain/leaderboard/campaign buckets are intentionally not
- * computed yet (no recipient system exists until M10), so a portion of the
- * backend pool is currently unallocated by design.
+ * Donation/operation/captain are a percentage of the BACKEND commission
+ * Market Heist actually received for that row (blueprint §5 "Backend Pool
+ * Allocation"). These are two different bases and are not meant to sum to
+ * 100% of anything.
+ *
+ * Captain reward (M11) is one-level and never proportional to the referred
+ * member's own reward — a thank-you for growing the community, not a
+ * downstream override (§23: not MLM, not passive income, not an investment
+ * return). The rate scales by the captain's tier (lib/captain.ts's Scout
+ * 2% -> Elite Captain 10%, per issue #24's acceptance criteria) rather than
+ * a single flat rate. Leaderboard/campaign buckets remain unallocated: a
+ * leaderboard payout is a periodic, admin-triggered action (no per-row
+ * trigger point exists yet), and campaign has no recipient system until the
+ * V2 Campaign Engine.
  */
 const MEMBER_FEE_REWARD_RATE: Record<string, number> = {
   basic: 0.015, // 0–3% band, §5
@@ -30,6 +38,10 @@ export type RewardAllocationInput = {
   matchedPlanId: string | null;
   fees: number | null;
   backendCommission: number;
+  /** The captain who referred matchedUserId, if any (resolved by the caller from captain_networks). */
+  captainId?: string | null;
+  /** The captain's current tier reward rate (resolved by the caller from lib/captain.ts's getCaptainTier) — null/0 if below Scout, so no captain allocation is added. */
+  captainRewardRate?: number | null;
 };
 
 export type RewardAllocation = {
@@ -59,6 +71,13 @@ export function computeRewardAllocations(input: RewardAllocationInput): RewardAl
 
   const operation = round(input.backendCommission * OPERATION_RATE_OF_BACKEND_COMMISSION);
   if (operation > 0) allocations.push({ user_id: null, allocation_type: "operation", amount: operation });
+
+  if (input.captainId && input.captainRewardRate) {
+    const captainAmount = round(input.backendCommission * input.captainRewardRate);
+    if (captainAmount > 0) {
+      allocations.push({ user_id: input.captainId, allocation_type: "captain", amount: captainAmount });
+    }
+  }
 
   return allocations;
 }

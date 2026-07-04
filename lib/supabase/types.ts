@@ -27,7 +27,7 @@ export type PlanRow = {
   sort: number;
 };
 
-export type UserRole = "member" | "admin";
+export type UserRole = "member" | "admin" | "captain";
 export type RiskProfile = "conservative" | "moderate" | "aggressive";
 
 export type ProfileRow = {
@@ -39,6 +39,7 @@ export type ProfileRow = {
   role: UserRole;
   risk_profile: RiskProfile | null;
   ai_consent_at: string | null;
+  genesis_joined_at: string | null;
   created_at: string;
 };
 
@@ -302,6 +303,45 @@ export type AiChatSessionRow = {
   created_at: string;
 };
 
+export type ReferralCodeRow = {
+  code: string;
+  captain_id: string;
+  active: boolean;
+  created_at: string;
+};
+
+export type CaptainNetworkRow = {
+  id: string;
+  captain_id: string;
+  member_id: string;
+  referral_code: string;
+  joined_at: string;
+};
+
+export type LeaderboardBoard = "volume" | "reward" | "discipline" | "captain" | "points";
+
+export type LeaderboardEntryRow = {
+  id: string;
+  board: LeaderboardBoard;
+  period: string;
+  user_id: string;
+  score: number;
+  rank: number | null;
+  metrics: Record<string, unknown>;
+  computed_at: string;
+};
+
+export type GenesisEligibilityRow = {
+  id: string;
+  user_id: string;
+  campaign_key: string;
+  is_eligible: boolean;
+  reservation_id: string | null;
+  requirements_json: Record<string, unknown>;
+  eligible_at: string | null;
+  exported_at: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -485,6 +525,32 @@ export type Database = {
         Insert: Omit<AiChatSessionRow, "id" | "output" | "token_usage" | "created_at"> &
           Partial<Pick<AiChatSessionRow, "id" | "output" | "token_usage" | "created_at">>;
         Update: Partial<AiChatSessionRow>;
+        Relationships: [];
+      };
+      referral_codes: {
+        Row: ReferralCodeRow;
+        Insert: Omit<ReferralCodeRow, "active" | "created_at"> & Partial<Pick<ReferralCodeRow, "active" | "created_at">>;
+        Update: Partial<ReferralCodeRow>;
+        Relationships: [];
+      };
+      captain_networks: {
+        Row: CaptainNetworkRow;
+        Insert: Omit<CaptainNetworkRow, "id" | "joined_at"> & Partial<Pick<CaptainNetworkRow, "id" | "joined_at">>;
+        Update: Partial<CaptainNetworkRow>;
+        Relationships: [];
+      };
+      leaderboard_entries: {
+        Row: LeaderboardEntryRow;
+        Insert: Omit<LeaderboardEntryRow, "id" | "period" | "rank" | "metrics" | "computed_at"> &
+          Partial<Pick<LeaderboardEntryRow, "id" | "period" | "rank" | "metrics" | "computed_at">>;
+        Update: Partial<LeaderboardEntryRow>;
+        Relationships: [];
+      };
+      genesis_eligibility: {
+        Row: GenesisEligibilityRow;
+        Insert: Omit<GenesisEligibilityRow, "id" | "campaign_key" | "is_eligible" | "reservation_id" | "requirements_json" | "eligible_at" | "exported_at"> &
+          Partial<Pick<GenesisEligibilityRow, "id" | "campaign_key" | "is_eligible" | "reservation_id" | "requirements_json" | "eligible_at" | "exported_at">>;
+        Update: Partial<GenesisEligibilityRow>;
         Relationships: [];
       };
     };

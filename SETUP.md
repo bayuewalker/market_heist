@@ -27,6 +27,7 @@ migrations **in order**:
 12. [`supabase/migrations/0012_missions_points_rank.sql`](./supabase/migrations/0012_missions_points_rank.sql)
 13. [`supabase/migrations/0013_signal_engine_v2.sql`](./supabase/migrations/0013_signal_engine_v2.sql)
 14. [`supabase/migrations/0014_mentor_journal.sql`](./supabase/migrations/0014_mentor_journal.sql)
+15. [`supabase/migrations/0015_leaderboard_captain_genesis.sql`](./supabase/migrations/0015_leaderboard_captain_genesis.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -66,7 +67,7 @@ In the Vercel project → **Settings → Environment Variables**, add:
 | `NVIDIA_MODEL` | `meta/llama-3.3-70b-instruct` | Optional (default) |
 | `PAYMENT_TRON_ADDRESS` | your TRON **USDT (TRC20)** wallet address | Where members send USDT |
 | `TRONGRID_API_KEY` | TronGrid API key | Optional (raises rate limits) |
-| `CRON_SECRET` | long random string | Recommended — protects the payment + trend-update crons |
+| `CRON_SECRET` | long random string | Recommended — protects the payment/trend-update/leaderboard crons |
 | `NEXT_PUBLIC_MENTORING_LINK` | your Telegram/Zoom/Discord link | Optional — "Join session" target on `/dashboard/mentoring` |
 | `NEXT_PUBLIC_APP_URL` | `https://your-app.vercel.app` | Public — used to build deep links in bot messages |
 | `TELEGRAM_BOT_TOKEN` | your bot token from @BotFather | **Secret** — server only |
@@ -121,6 +122,52 @@ manual "Generate today's updates" refresh from the page. Requires
 Basic unlocks the Friday session, Pro/Elite unlock every weekday. Edit that
 file to adjust days/topics, and set `NEXT_PUBLIC_MENTORING_LINK` to your real
 session link.
+
+### Leaderboard, Captain Network, Genesis Pass
+
+Migration `0015` adds `leaderboard_entries`, `referral_codes`,
+`captain_networks`, `genesis_eligibility`, `profiles.genesis_joined_at`, and
+widens `profiles.role` to include `captain` — **admin-assignable only**
+(issue #24), same class of privilege as `admin`.
+
+`/dashboard/leaderboard` shows 5 boards (Volume, Reward, Discipline,
+Captain, Points — §22). Volume/Reward/Captain require a `verified` broker
+UID; Discipline and Points are open to any signed-in member. A Vercel Cron
+(`/api/leaderboard/recompute`, every 6 hours — see `vercel.json`) recomputes
+and replaces the stored snapshot; admins can also trigger it manually the
+same way the trends cron works. The Discipline board applies the blueprint's
+weighted formula (40% volume / 25% active days / 20% journal / 10% reward /
+5% community) — the one board meant to reward well-rounded activity rather
+than a single raw metric.
+
+Admins promote a member to `captain` from `/admin/users` — that action
+immediately generates their referral code (`getOrCreateReferralCode` in
+`lib/captain.ts`); demoting a captain away deactivates their code so old
+signup links stop attributing to them. `/dashboard/captain` shows the
+shareable link (`/signup?ref=<code>`) to captains, or a locked "ask an
+admin" message to everyone else. Referral attribution happens at signup
+time via a `handle_new_user()` trigger extension — the signup form passes
+the `ref` query param through `auth.signUp()`'s user metadata (normalized
+to lowercase/trimmed, both client-side and again in the trigger), and the
+trigger creates a `captain_networks` row if the code is valid.
+
+Tiers and reward rates are exact per issue #24's acceptance criteria:
+Scout (5 referrals, 2%) → Captain (25, 4%) → Commander (100, 6%) → Elite
+Captain (250+, 10%) — below 5 referrals there's no tier and no Captain
+Reward accrues yet. Captain Code V1 is intentionally lightweight; full
+verification-gated tiering is a V2 Captain Dashboard feature (§17.2).
+Captain Reward (a % of the backend commission on a referred member's
+matched trades, scaled by the captain's current tier, never proportional
+to the referred member's own reward — not MLM, §23) is computed in
+`lib/rewards.ts` alongside the existing member/donation/operation buckets.
+
+`/dashboard/genesis` is a pull-based eligibility checklist (§12.7): Telegram
+linked, profile completed, broker UID submitted, broker UID verified, ≥1,500
+Heist Points, and joined the Genesis campaign (a one-click self-service
+opt-in). The first time all six are met, a sticky `reservation_id` is
+minted — it's never revoked even if a later balance change would otherwise
+fail one requirement. Off-chain only; no NFT minting in MVP. Admins export
+eligible members as CSV from `/admin/genesis`.
 
 ### Broker Station & UID verification
 
