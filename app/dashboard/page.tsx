@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Radar, Sparkles, TrendingUp } from "lucide-react";
+import { MessageSquareText, Radar, Sparkles, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import SignalCard from "@/components/dashboard/SignalCard";
 import Button from "@/components/ui/Button";
@@ -29,7 +29,7 @@ export default async function DashboardOverview() {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
 
-  const [{ count: totalCount }, { count: todayCount }, { data: recent }] = await Promise.all([
+  const [{ count: totalCount }, { count: todayCount }, { data: recent }, { data: character }] = await Promise.all([
     supabase.from("signals").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     supabase
       .from("signals")
@@ -42,6 +42,12 @@ export default async function DashboardOverview() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(4),
+    supabase
+      .from("character_configs")
+      .select("character_name, dashboard_note_title, dashboard_note_body")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   const limit = plan?.signal_limit ?? null;
@@ -64,6 +70,18 @@ export default async function DashboardOverview() {
           You&rsquo;re on the <span className="text-accent-strong">{plan?.name ?? "Basic"}</span> plan.
         </p>
       </header>
+
+      {character?.dashboard_note_body && (
+        <div className="flex gap-3 rounded-2xl border border-accent/20 bg-accent/5 p-4">
+          <MessageSquareText className="h-5 w-5 shrink-0 text-accent-strong" aria-hidden="true" />
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              {character.dashboard_note_title || `${character.character_name} Note`}
+            </p>
+            <p className="mt-0.5 text-sm text-muted">{character.dashboard_note_body}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => (

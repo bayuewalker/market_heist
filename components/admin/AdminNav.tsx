@@ -11,6 +11,7 @@ import {
   Radar,
   ShieldCheck,
   Users,
+  UserRound,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -27,6 +28,7 @@ const items: NavItem[] = [
   { href: "/admin/rewards", label: "Rewards", icon: Coins },
   { href: "/admin/signals", label: "Signals", icon: Radar },
   { href: "/admin/payments", label: "Payments", icon: Wallet },
+  { href: "/admin/character", label: "Character", icon: UserRound },
 ];
 
 export default function AdminNav({ email }: { email: string }) {
