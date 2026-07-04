@@ -83,9 +83,11 @@ export async function computeLeaderboards(
     if (!pointsByUser.has(row.user_id)) pointsByUser.set(row.user_id, Number(row.balance_after));
   }
 
-  // Captain Leaderboard ranks verified referred users (§23) — same
-  // verifiedUserIds gate as Volume/Reward, applied to the referred MEMBER,
-  // not the captain themselves.
+  // Captain Leaderboard has two separate verification gates (§23): the
+  // count itself only includes referred MEMBERS who are verified (below),
+  // and separately, a captain only appears on this board at all if THEY
+  // themselves have a verified UID (the `.filter` where `captain` is built,
+  // same eligibility gate as Volume/Reward).
   const { data: captainRows } = await admin.from("captain_networks").select("captain_id, member_id");
   const captainCounts = new Map<string, number>();
   for (const row of captainRows ?? []) {
