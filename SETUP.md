@@ -22,6 +22,7 @@ migrations **in order**:
 7. [`supabase/migrations/0007_trend_updates.sql`](./supabase/migrations/0007_trend_updates.sql)
 8. [`supabase/migrations/0008_broker_station.sql`](./supabase/migrations/0008_broker_station.sql)
 9. [`supabase/migrations/0009_reward_ledger.sql`](./supabase/migrations/0009_reward_ledger.sql)
+10. [`supabase/migrations/0010_character_configs.sql`](./supabase/migrations/0010_character_configs.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -128,6 +129,16 @@ Members can freely edit their UID while `submitted`, and resubmitting after a
 transition is admin-only (enforced by a DB trigger, not just the UI). A
 verified broker account is the eligibility gate for the reward engine and
 leaderboard.
+
+### The Playmaker (character layer)
+
+`character_configs` holds Market Heist's brand persona — copy, avatar,
+dashboard note, signal prefix, and bot intro — so it can change without a
+deploy. Admins edit the active persona on `/admin/character`; the seeded row
+is **The Playmaker** (migration `0010`). Only one row is expected to be
+`is_active` at a time — the app reads "the active config" (e.g. the dashboard
+overview's Playmaker Note card); toggling a second row active is an admin
+mistake to avoid, not something the schema blocks.
 
 ### Reward ledger (commission import)
 

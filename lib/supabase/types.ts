@@ -158,6 +158,23 @@ export type AuditLogRow = {
   created_at: string;
 };
 
+export type CharacterConfigRow = {
+  id: string;
+  character_key: string;
+  character_name: string;
+  role: string | null;
+  tagline: string | null;
+  avatar_url: string | null;
+  banner_url: string | null;
+  bot_intro_message: string | null;
+  signal_prefix: string | null;
+  dashboard_note_title: string | null;
+  dashboard_note_body: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -267,6 +284,13 @@ export type Database = {
         Row: AuditLogRow;
         Insert: Omit<AuditLogRow, "id" | "created_at"> & Partial<Pick<AuditLogRow, "id" | "created_at">>;
         Update: Partial<AuditLogRow>;
+        Relationships: [];
+      };
+      character_configs: {
+        Row: CharacterConfigRow;
+        Insert: Omit<CharacterConfigRow, "id" | "is_active" | "created_at" | "updated_at"> &
+          Partial<Pick<CharacterConfigRow, "id" | "is_active" | "created_at" | "updated_at">>;
+        Update: Partial<CharacterConfigRow>;
         Relationships: [];
       };
     };
