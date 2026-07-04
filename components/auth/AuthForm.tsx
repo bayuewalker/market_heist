@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { resolvePostLoginPath } from "@/lib/post-login-redirect";
 import Button from "@/components/ui/Button";
 import TelegramLoginButton from "./TelegramLoginButton";
 
@@ -38,7 +39,8 @@ function safeRedirect(target: string | null): string {
 export default function AuthForm({ mode, telegramBotUsername }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = safeRedirect(searchParams.get("redirect"));
+  const explicitRedirect = searchParams.get("redirect");
+  const redirectTo = safeRedirect(explicitRedirect);
   const refCode = searchParams.get("ref")?.trim().toLowerCase().slice(0, 32) || undefined;
   const telegramError = searchParams.get("telegram_error");
 
@@ -81,12 +83,18 @@ export default function AuthForm({ mode, telegramBotUsername }: AuthFormProps) {
           setNotice("Account created. Check your email to confirm, then log in.");
         }
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (signInError) throw signInError;
-        router.push(redirectTo);
+        // Respect an explicit deep link; otherwise route admins to the admin
+        // panel instead of the member dashboard.
+        const target =
+          !explicitRedirect && signInData.user
+            ? await resolvePostLoginPath(supabase, signInData.user.id)
+            : redirectTo;
+        router.push(target);
         router.refresh();
       }
     } catch (err) {

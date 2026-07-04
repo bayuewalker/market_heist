@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/supabase/types";
+import { resolvePostLoginPath } from "@/lib/post-login-redirect";
 
 /**
  * Refreshes the Supabase auth session on every matched request and guards the
@@ -47,7 +48,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && (pathname === "/login" || pathname === "/signup")) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
+    redirectUrl.pathname = await resolvePostLoginPath(supabase, user.id);
     redirectUrl.search = "";
     return NextResponse.redirect(redirectUrl);
   }

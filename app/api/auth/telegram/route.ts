@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TELEGRAM_LOGIN_STATE_COOKIE, timingSafeEqualStrings, verifyTelegramLoginPayload } from "@/lib/telegram-login";
 import { writeAuditLog } from "@/lib/rewards";
+import { resolvePostLoginPath } from "@/lib/post-login-redirect";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,5 +87,5 @@ export async function GET(request: Request) {
     meta: { telegram_id: payload.id },
   });
 
-  return respond("/dashboard");
+  return respond(await resolvePostLoginPath(supabase, link.user_id));
 }
