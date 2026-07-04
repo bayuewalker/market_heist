@@ -1,7 +1,5 @@
 import type { RiskLevel, SignalBias } from "@/lib/supabase/types";
-
-const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const DEFAULT_MODEL = "meta/llama-3.3-70b-instruct";
+import { callNvidiaChat, extractJson } from "@/lib/nvidia-client";
 
 export type SignalInput = {
   pair: string;
@@ -40,49 +38,12 @@ function toNumberOrNull(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function extractJson(content: string): Record<string, unknown> {
-  const cleaned = content
-    .replace(/```json/gi, "")
-    .replace(/```/g, "")
-    .trim();
-  try {
-    const parsed = JSON.parse(cleaned);
-    if (isPlainObject(parsed)) return parsed;
-  } catch {
-    // fall through to brace-matching below
-  }
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (match) {
-    try {
-      const parsed = JSON.parse(match[0]);
-      if (isPlainObject(parsed)) return parsed;
-    } catch {
-      // fall through to the shared error below
-    }
-  }
-  throw new Error("Could not parse a signal from the AI response.");
-}
-
-/** Strip invisible Unicode formatting characters that can sneak in when a key is pasted from some sources. */
-function sanitizeApiKey(key: string): string {
-  return key.replace(/[​-‏‪-‮﻿]/g, "").trim();
-}
-
 /**
  * Ask the NVIDIA-hosted model to act as "Mentor Heister" and return a
  * structured, educational trading signal. The prompt is constrained to avoid
  * profit guarantees.
  */
 export async function generateSignal(input: SignalInput): Promise<GeneratedSignal> {
-  const rawApiKey = process.env.NVIDIA_API_KEY;
-  if (!rawApiKey) throw new Error("NVIDIA_API_KEY is not configured.");
-  const apiKey = sanitizeApiKey(rawApiKey);
-  const model = process.env.NVIDIA_MODEL || DEFAULT_MODEL;
-
   const system =
     "You are Mentor Heister, a tactical AI market analyst for the Market Heist community. " +
     "You produce educational technical-analysis signals using the FIBOLUTION technique. " +
@@ -111,32 +72,14 @@ export async function generateSignal(input: SignalInput): Promise<GeneratedSigna
     "\nGive one educational signal. Entry/stop/invalidation/tp1-3 must be consistent with the current " +
     "price when provided. Keep the rationale concise and risk-aware.";
 
-  const response = await fetch(NVIDIA_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-      temperature: 0.3,
-      top_p: 0.9,
-      max_tokens: 400,
-    }),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`NVIDIA API error ${response.status}: ${detail.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const content: string = data?.choices?.[0]?.message?.content ?? "";
-  const parsed = extractJson(content);
+  const { content } = await callNvidiaChat(
+    [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    { temperature: 0.3, maxTokens: 400 },
+  );
+  const parsed = extractJson(content, "Could not parse a signal from the AI response.");
 
   const rawBias = String(parsed.bias ?? "neutral").toLowerCase() as SignalBias;
   const rawRisk = String(parsed.risk_level ?? "").toLowerCase() as RiskLevel;
