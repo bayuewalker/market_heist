@@ -60,12 +60,20 @@ export default async function CaptainPage() {
   // members' names needs the service role — full_name isn't sensitive and
   // it's the one field this query selects.
   const memberIds = [...new Set((referred ?? []).map((r) => r.member_id))];
-  const { data: profiles } =
-    memberIds.length > 0 ? await admin.from("profiles").select("id, full_name").in("id", memberIds) : { data: [] };
+  const [{ data: profiles }, { data: verifiedRows }] = await Promise.all([
+    memberIds.length > 0 ? admin.from("profiles").select("id, full_name").in("id", memberIds) : Promise.resolve({ data: [] }),
+    memberIds.length > 0
+      ? admin.from("broker_accounts").select("user_id").in("user_id", memberIds).eq("status", "verified")
+      : Promise.resolve({ data: [] }),
+  ]);
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const verifiedMemberIds = new Set((verifiedRows ?? []).map((r) => r.user_id));
 
   const referredCount = referred?.length ?? 0;
-  const tier = getCaptainTier(referredCount);
+  const verifiedCount = memberIds.filter((id) => verifiedMemberIds.has(id)).length;
+  // Tiers count only VERIFIED referred users (§23's Captain Network Roadmap
+  // table) — real trading activity, not just a signup.
+  const tier = getCaptainTier(verifiedCount);
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -81,21 +89,30 @@ export default async function CaptainPage() {
 
       {!tier && (
         <p className="text-xs text-muted">
-          Reach 5 referred members to unlock Scout tier and start earning Captain Reward on their trades.
+          Reach 5 verified referred members to unlock Scout tier and start earning Captain Reward on their trades.
         </p>
       )}
 
       <CaptainCodeCard code={code} link={code ? appUrl(`/signup?ref=${code}`) : null} />
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Your branch ({referredCount})</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
+          Your branch — {referredCount} invited, {verifiedCount} verified
+        </h2>
         {referred && referred.length > 0 ? (
           <div className="flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface p-2">
             {referred.map((r) => (
-              <div key={r.member_id} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5">
-                <p className="text-sm font-medium text-foreground">
-                  {profileById.get(r.member_id)?.full_name?.trim() || `Heister ${r.member_id.slice(0, 4)}`}
-                </p>
+              <div key={r.member_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-foreground">
+                    {profileById.get(r.member_id)?.full_name?.trim() || `Heister ${r.member_id.slice(0, 4)}`}
+                  </p>
+                  {verifiedMemberIds.has(r.member_id) && (
+                    <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent-strong">
+                      Verified
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted">Joined {fmtDate(r.joined_at)}</p>
               </div>
             ))}

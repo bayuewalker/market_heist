@@ -151,11 +151,15 @@ the `ref` query param through `auth.signUp()`'s user metadata (normalized
 to lowercase/trimmed, both client-side and again in the trigger), and the
 trigger creates a `captain_networks` row if the code is valid.
 
-Tiers and reward rates are exact per issue #24's acceptance criteria:
-Scout (5 referrals, 2%) → Captain (25, 4%) → Commander (100, 6%) → Elite
-Captain (250+, 10%) — below 5 referrals there's no tier and no Captain
-Reward accrues yet. Captain Code V1 is intentionally lightweight; full
-verification-gated tiering is a V2 Captain Dashboard feature (§17.2).
+Tiers and reward rates are exact per §23's Captain Network Roadmap table:
+Scout (5, 2%) → Captain (25, 4%) → Commander (100, 6%) → Elite Captain
+(250+, 10%). The threshold counts **verified** referred members (a broker
+UID verified — real trading activity), not raw signups, matching the
+Captain Leaderboard's own "ranks verified users" rule — `/dashboard/captain`
+shows both an invited count and a verified count so the distinction is
+visible. Below 5 verified referrals there's no tier and no Captain Reward
+accrues yet. Captain Code V1 is intentionally lightweight (branch volume
+and estimated-reward fields are a V2 Captain Dashboard feature, §17.2).
 Captain Reward (a % of the backend commission on a referred member's
 matched trades, scaled by the captain's current tier, never proportional
 to the referred member's own reward — not MLM, §23) is computed in

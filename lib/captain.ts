@@ -4,12 +4,14 @@ import type { Database } from "@/lib/supabase/types";
 
 export type CaptainTier = "Scout" | "Captain" | "Commander" | "Elite Captain";
 
-// Tiers, thresholds, and reward rates are exact per issue #24's acceptance
-// criteria (§23) — not founder-tunable placeholders like the leaderboard's
-// scale constants. Below Scout's 5-referral threshold there's no tier yet
-// and no captain reward accrues; Captain Code V1 (§11.2 #17) is otherwise
-// intentionally lightweight, with the fuller verification-gated Captain
-// Dashboard deferred to V2 (§17.2).
+// Tiers, thresholds, and reward rates are exact per §23's Captain Network
+// Roadmap table — not founder-tunable placeholders like the leaderboard's
+// scale constants. Thresholds count VERIFIED referred users (a broker UID
+// verified, i.e. real trading activity), not raw signups — see
+// countVerifiedReferrals() below. Below Scout's 5-verified-referral
+// threshold there's no tier yet and no captain reward accrues; Captain Code
+// V1 (§11.2 #17) is otherwise intentionally lightweight, with the fuller
+// Captain Dashboard (branch volume, estimated reward) deferred to V2 (§17.2).
 const TIERS: { name: CaptainTier; minReferred: number; rewardRate: number }[] = [
   { name: "Elite Captain", minReferred: 250, rewardRate: 0.1 },
   { name: "Commander", minReferred: 100, rewardRate: 0.06 },
@@ -17,8 +19,22 @@ const TIERS: { name: CaptainTier; minReferred: number; rewardRate: number }[] = 
   { name: "Scout", minReferred: 5, rewardRate: 0.02 },
 ];
 
-export function getCaptainTier(referredCount: number): { name: CaptainTier; rewardRate: number } | null {
-  return TIERS.find((t) => referredCount >= t.minReferred) ?? null;
+export function getCaptainTier(verifiedReferredCount: number): { name: CaptainTier; rewardRate: number } | null {
+  return TIERS.find((t) => verifiedReferredCount >= t.minReferred) ?? null;
+}
+
+/** Distinct referred members of `captainId` who have a verified broker account. */
+export async function countVerifiedReferrals(admin: SupabaseClient<Database>, captainId: string): Promise<number> {
+  const { data: referred } = await admin.from("captain_networks").select("member_id").eq("captain_id", captainId);
+  const memberIds = [...new Set((referred ?? []).map((r) => r.member_id))];
+  if (memberIds.length === 0) return 0;
+
+  const { data: verifiedRows } = await admin
+    .from("broker_accounts")
+    .select("user_id")
+    .in("user_id", memberIds)
+    .eq("status", "verified");
+  return new Set((verifiedRows ?? []).map((r) => r.user_id)).size;
 }
 
 /** 8 hex chars — short enough to type/share, ~4.3 billion possible codes. */
