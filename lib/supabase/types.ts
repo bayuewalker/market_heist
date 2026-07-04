@@ -348,7 +348,6 @@ export type DonationLedgerRow = {
   amount: number;
   description: string;
   proof_url: string | null;
-  created_by: string | null;
   created_at: string;
 };
 
@@ -565,8 +564,8 @@ export type Database = {
       };
       donation_ledger: {
         Row: DonationLedgerRow;
-        Insert: Omit<DonationLedgerRow, "id" | "proof_url" | "created_by" | "created_at"> &
-          Partial<Pick<DonationLedgerRow, "id" | "proof_url" | "created_by" | "created_at">>;
+        Insert: Omit<DonationLedgerRow, "id" | "proof_url" | "created_at"> &
+          Partial<Pick<DonationLedgerRow, "id" | "proof_url" | "created_at">>;
         Update: Partial<DonationLedgerRow>;
         Relationships: [];
       };

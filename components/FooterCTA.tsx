@@ -79,9 +79,14 @@ export default function FooterCTA() {
               </a>
             ))}
           </nav>
-          <p className="text-xs text-muted">
-            &copy; {new Date().getFullYear()} Market Heist. All rights reserved.
-          </p>
+          <div className="flex flex-col items-center gap-1 sm:items-end">
+            <p className="text-xs text-muted">
+              &copy; {new Date().getFullYear()} Market Heist. All rights reserved.
+            </p>
+            <p className="text-[11px] uppercase tracking-wider text-muted/70">
+              Powered by W.A.R.P ENGINE
+            </p>
+          </div>
         </Container>
       </div>
     </footer>

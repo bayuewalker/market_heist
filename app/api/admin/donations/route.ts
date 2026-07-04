@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   const period = String(body.period ?? "").trim().slice(0, 40);
   const description = String(body.description ?? "").trim().slice(0, MAX_TEXT_LENGTH);
   const amount = Number(body.amount);
-  const proofUrl = body.proof_url ? String(body.proof_url).trim().slice(0, MAX_TEXT_LENGTH) : null;
+  const proofUrlRaw = body.proof_url ? String(body.proof_url).trim().slice(0, MAX_TEXT_LENGTH) : null;
 
   if (!period || !description) {
     return NextResponse.json({ error: "A period and description are required." }, { status: 400 });
@@ -39,10 +39,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Amount must be a positive number." }, { status: 400 });
   }
 
+  // This is rendered as an <a href> on the public Donation Ledger page — only
+  // allow http(s) so a malicious/typo'd value (e.g. a `javascript:` URL)
+  // can't become a click-to-XSS vector for anonymous visitors.
+  let proofUrl: string | null = null;
+  if (proofUrlRaw) {
+    try {
+      const parsed = new URL(proofUrlRaw);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error("bad scheme");
+      proofUrl = parsed.toString();
+    } catch {
+      return NextResponse.json({ error: "Proof URL must be a valid http(s) link." }, { status: 400 });
+    }
+  }
+
   const admin = createAdminClient();
   const { data: inserted, error } = await admin
     .from("donation_ledger")
-    .insert({ period, description, amount, proof_url: proofUrl, created_by: user.id })
+    .insert({ period, description, amount, proof_url: proofUrl })
     .select()
     .single();
 

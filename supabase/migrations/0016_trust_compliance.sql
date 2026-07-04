@@ -15,6 +15,13 @@
 -- (POST/DELETE /api/admin/donations); there is no insert/update/delete
 -- policy below because RLS only needs to gate the anon/authenticated roles
 -- the API surfaces, not the service role, which bypasses RLS entirely.
+--
+-- No `created_by` column: the public `using (true)` select policy below
+-- means every column here is readable by anyone via the REST API directly
+-- (not just through the curated page), so recording which admin created a
+-- row would leak that admin's auth.users UUID to anonymous readers. The
+-- actor is already captured in `audit_logs` (action "donation.create"),
+-- which is not public.
 -- ---------------------------------------------------------------------------
 create table if not exists public.donation_ledger (
   id          uuid primary key default gen_random_uuid(),
@@ -22,7 +29,6 @@ create table if not exists public.donation_ledger (
   amount      numeric(18, 6) not null,
   description text not null,
   proof_url   text,
-  created_by  uuid references auth.users (id) on delete set null,
   created_at  timestamptz not null default now()
 );
 

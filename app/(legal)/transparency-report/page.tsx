@@ -26,8 +26,8 @@ export default function TransparencyReportPage() {
       </ul>
 
       <p>
-        In the meantime, live figures are always available on the{" "}
-        <a href="/dashboard/leaderboard">Leaderboard</a> and <a href="/donation-ledger">Donation Ledger</a>.
+        In the meantime, live figures are always available on the public{" "}
+        <a href="/donation-ledger">Donation Ledger</a>, and on the Leaderboard for signed-in members.
       </p>
 
       <p>

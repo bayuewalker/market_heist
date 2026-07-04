@@ -16,9 +16,10 @@ const MARKETS: MarketKind[] = ["crypto", "forex", "commodity"];
  * - Vercel Cron, authenticated with CRON_SECRET (daily schedule).
  * - A signed-in admin, for a manual "Generate now" refresh.
  *
- * Returns the admin's user id when a signed-in admin triggered this (so the
- * caller can audit-log it), or null for the cron-triggered path, which is
- * routine and would just be noise in the audit log.
+ * Returns the admin's user id when a signed-in admin triggered this, null
+ * for the cron-triggered path, or undefined if unauthorized. `handle()`
+ * below only writes an audit_logs row when an admin id is present — the
+ * cron path is routine and would just be noise in the audit log.
  */
 async function authorizedActorId(request: Request): Promise<string | null | undefined> {
   const secret = process.env.CRON_SECRET;

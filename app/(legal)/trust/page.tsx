@@ -10,7 +10,11 @@ const PAGES: { href: string; label: string; detail: string }[] = [
   { href: "/risk", label: "Risk Disclaimer", detail: "Trading risk and no guarantee of profit." },
   { href: "/affiliate-disclosure", label: "Affiliate Disclosure", detail: "How our broker partnerships work." },
   { href: "/reward-policy", label: "Reward Policy", detail: "How reward eligibility, status, and payment work." },
-  { href: "/dashboard/signals", label: "Signal Archive", detail: "Every signal outcome, shown transparently." },
+  {
+    href: "/dashboard/signals",
+    label: "Signal Archive",
+    detail: "Every signal outcome, shown transparently — members only, sign in to view.",
+  },
   { href: "/donation-ledger", label: "Donation Ledger", detail: "Where the donation pool went, in full." },
   { href: "/transparency-report", label: "Transparency Report", detail: "Monthly report on signals, rewards, and growth." },
   { href: "/terms", label: "Terms of Service", detail: "The product/legal boundary." },
