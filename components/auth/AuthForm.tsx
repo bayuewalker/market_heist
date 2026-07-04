@@ -6,9 +6,19 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
+import TelegramLoginButton from "./TelegramLoginButton";
 
 type AuthFormProps = {
   mode: "login" | "signup";
+  /** Only passed on `/login` — Telegram Login only ever signs in an already-linked account, never creates one. */
+  telegramBotUsername?: string;
+};
+
+const TELEGRAM_ERROR_MESSAGES: Record<string, string> = {
+  invalid: "That Telegram sign-in link wasn't valid. Please try again.",
+  not_linked: "This Telegram account isn't linked to a Market Heist account yet. Log in with email and link Telegram from your dashboard, or sign up if you're new here.",
+  no_email: "Couldn't sign you in with Telegram. Please log in with email instead.",
+  session_failed: "Couldn't sign you in with Telegram. Please log in with email instead.",
 };
 
 const inputClass =
@@ -24,11 +34,12 @@ function safeRedirect(target: string | null): string {
   return target;
 }
 
-export default function AuthForm({ mode }: AuthFormProps) {
+export default function AuthForm({ mode, telegramBotUsername }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = safeRedirect(searchParams.get("redirect"));
   const refCode = searchParams.get("ref")?.trim().toLowerCase().slice(0, 32) || undefined;
+  const telegramError = searchParams.get("telegram_error");
 
   const isSignup = mode === "signup";
   const [fullName, setFullName] = useState("");
@@ -36,7 +47,9 @@ export default function AuthForm({ mode }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    telegramError ? TELEGRAM_ERROR_MESSAGES[telegramError] ?? TELEGRAM_ERROR_MESSAGES.invalid : null,
+  );
   const [notice, setNotice] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -183,6 +196,23 @@ export default function AuthForm({ mode }: AuthFormProps) {
         {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
         {isSignup ? "Create account" : "Log in"}
       </Button>
+
+      {telegramBotUsername && (
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex w-full items-center gap-3 text-xs uppercase tracking-wide text-muted">
+            <span className="h-px flex-1 bg-border-subtle" />
+            or
+            <span className="h-px flex-1 bg-border-subtle" />
+          </div>
+          <TelegramLoginButton
+            botUsername={telegramBotUsername}
+            authUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/api/auth/telegram`}
+          />
+          <p className="text-center text-xs text-muted">
+            Only works if you&rsquo;ve already linked Telegram from your dashboard.
+          </p>
+        </div>
+      )}
 
       <p className="text-center text-sm text-muted">
         {isSignup ? (

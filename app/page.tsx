@@ -7,11 +7,16 @@ import FAQ from "@/components/FAQ";
 import FooterCTA from "@/components/FooterCTA";
 
 export default function Home() {
+  const telegramBotUsername =
+    process.env.TELEGRAM_BOT_USERNAME && process.env.TELEGRAM_BOT_TOKEN
+      ? process.env.TELEGRAM_BOT_USERNAME
+      : undefined;
+
   return (
     <div className="flex min-h-full flex-1 flex-col bg-background">
       <Header />
       <main className="flex-1">
-        <Hero />
+        <Hero telegramBotUsername={telegramBotUsername} />
         <HowItWorks />
         <Pricing />
         <Testimonials />
