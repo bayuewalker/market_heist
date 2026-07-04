@@ -93,17 +93,25 @@ export async function POST(request: Request) {
       : { data: [] };
   const captainByMember = new Map((captainLinks ?? []).map((c) => [c.member_id, c.captain_id]));
 
-  // Each captain's reward rate depends on their CURRENT tier (referred-
-  // member count), so batch-count every referenced captain's full branch —
-  // not just the members matched in this import.
+  // Each captain's reward rate depends on their CURRENT tier, which counts
+  // only VERIFIED referred members (§23's Captain Network Roadmap table) —
+  // batch-resolve every referenced captain's full branch, not just the
+  // members matched in this import.
   const captainIds = [...new Set([...captainByMember.values()].filter((id): id is string => !!id))];
   const { data: allCaptainLinks } =
     captainIds.length > 0
-      ? await admin.from("captain_networks").select("captain_id").in("captain_id", captainIds)
+      ? await admin.from("captain_networks").select("captain_id, member_id").in("captain_id", captainIds)
       : { data: [] };
-  const referredCountByCaptain = new Map<string, number>();
+  const branchMemberIds = [...new Set((allCaptainLinks ?? []).map((r) => r.member_id))];
+  const { data: verifiedBranchRows } =
+    branchMemberIds.length > 0
+      ? await admin.from("broker_accounts").select("user_id").in("user_id", branchMemberIds).eq("status", "verified")
+      : { data: [] };
+  const verifiedBranchMemberIds = new Set((verifiedBranchRows ?? []).map((r) => r.user_id));
+  const verifiedReferredCountByCaptain = new Map<string, number>();
   for (const row of allCaptainLinks ?? []) {
-    referredCountByCaptain.set(row.captain_id, (referredCountByCaptain.get(row.captain_id) ?? 0) + 1);
+    if (!verifiedBranchMemberIds.has(row.member_id)) continue;
+    verifiedReferredCountByCaptain.set(row.captain_id, (verifiedReferredCountByCaptain.get(row.captain_id) ?? 0) + 1);
   }
 
   // insertedRows[i] corresponds to matched[i]: this is a single INSERT ...
@@ -114,7 +122,7 @@ export async function POST(request: Request) {
   // this ordering assumption is otherwise unsafe.
   const allocations = matched.flatMap((r, i) => {
     const captainId = r.matched_user_id ? captainByMember.get(r.matched_user_id) ?? null : null;
-    const captainTier = captainId ? getCaptainTier(referredCountByCaptain.get(captainId) ?? 0) : null;
+    const captainTier = captainId ? getCaptainTier(verifiedReferredCountByCaptain.get(captainId) ?? 0) : null;
     return computeRewardAllocations({
       matchedUserId: r.matched_user_id,
       matchedPlanId: r.matched_plan_id,

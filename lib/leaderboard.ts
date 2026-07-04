@@ -83,9 +83,13 @@ export async function computeLeaderboards(
     if (!pointsByUser.has(row.user_id)) pointsByUser.set(row.user_id, Number(row.balance_after));
   }
 
-  const { data: captainRows } = await admin.from("captain_networks").select("captain_id");
+  // Captain Leaderboard ranks verified referred users (§23) — same
+  // verifiedUserIds gate as Volume/Reward, applied to the referred MEMBER,
+  // not the captain themselves.
+  const { data: captainRows } = await admin.from("captain_networks").select("captain_id, member_id");
   const captainCounts = new Map<string, number>();
   for (const row of captainRows ?? []) {
+    if (!verifiedUserIds.has(row.member_id)) continue;
     captainCounts.set(row.captain_id, (captainCounts.get(row.captain_id) ?? 0) + 1);
   }
 
