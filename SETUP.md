@@ -29,6 +29,7 @@ migrations **in order**:
 14. [`supabase/migrations/0014_mentor_journal.sql`](./supabase/migrations/0014_mentor_journal.sql)
 15. [`supabase/migrations/0015_leaderboard_captain_genesis.sql`](./supabase/migrations/0015_leaderboard_captain_genesis.sql)
 16. [`supabase/migrations/0016_trust_compliance.sql`](./supabase/migrations/0016_trust_compliance.sql)
+17. [`supabase/migrations/0017_reward_ledger_delete_guard.sql`](./supabase/migrations/0017_reward_ledger_delete_guard.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -365,6 +366,12 @@ New entries land as `pending`. Admins bulk-select rows on `/admin/rewards` to
 both actions write an `audit_logs` row. Members see their own totals and line
 items on `/dashboard/rewards` — public framing only ("trading fee reward"),
 never the backend commission rate itself.
+
+`reward_ledger` is append-only like `heist_points_ledger`: migration `0009`
+guards UPDATE (only `status`/`approved_*`/`paid_*` may change), and migration
+`0017` closes the gap found in a blueprint compliance audit by guarding
+DELETE too — no caller, including the service role, can delete a reward
+ledger row; a correction is always a new row.
 
 ### Trust & Compliance Layer
 
