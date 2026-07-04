@@ -7,6 +7,7 @@ import LogoutButton from "@/components/dashboard/LogoutButton";
 import ProfileNameForm from "@/components/dashboard/ProfileNameForm";
 import ChangePasswordForm from "@/components/dashboard/ChangePasswordForm";
 import DeleteAccountSection from "@/components/dashboard/DeleteAccountSection";
+import LinkTelegramSection from "@/components/dashboard/LinkTelegramSection";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,12 @@ export default async function AccountPage() {
 
   const isPaid = (plan?.price_monthly ?? 0) > 0;
 
+  const { data: telegramLink } = await supabase
+    .from("telegram_links")
+    .select("telegram_username")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-8">
       <header>
@@ -62,6 +69,11 @@ export default async function AccountPage() {
       <section className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-6">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Password</h2>
         <ChangePasswordForm />
+      </section>
+
+      <section className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Telegram</h2>
+        <LinkTelegramSection linked={!!telegramLink} telegramUsername={telegramLink?.telegram_username ?? null} />
       </section>
 
       <section className="flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-6">

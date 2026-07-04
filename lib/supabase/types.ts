@@ -175,6 +175,31 @@ export type CharacterConfigRow = {
   updated_at: string;
 };
 
+export type TelegramLinkRow = {
+  id: string;
+  user_id: string;
+  telegram_id: number;
+  telegram_username: string | null;
+  linked_at: string;
+};
+
+export type TelegramLinkCodeRow = {
+  id: string;
+  user_id: string;
+  code: string;
+  created_at: string;
+  expires_at: string;
+  consumed_at: string | null;
+};
+
+export type BotEventRow = {
+  id: string;
+  user_id: string | null;
+  event_type: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -291,6 +316,25 @@ export type Database = {
         Insert: Omit<CharacterConfigRow, "id" | "is_active" | "created_at" | "updated_at"> &
           Partial<Pick<CharacterConfigRow, "id" | "is_active" | "created_at" | "updated_at">>;
         Update: Partial<CharacterConfigRow>;
+        Relationships: [];
+      };
+      telegram_links: {
+        Row: TelegramLinkRow;
+        Insert: Omit<TelegramLinkRow, "id" | "linked_at"> & Partial<Pick<TelegramLinkRow, "id" | "linked_at">>;
+        Update: Partial<TelegramLinkRow>;
+        Relationships: [];
+      };
+      telegram_link_codes: {
+        Row: TelegramLinkCodeRow;
+        Insert: Omit<TelegramLinkCodeRow, "id" | "created_at" | "consumed_at"> &
+          Partial<Pick<TelegramLinkCodeRow, "id" | "created_at" | "consumed_at">>;
+        Update: Partial<TelegramLinkCodeRow>;
+        Relationships: [];
+      };
+      bot_events: {
+        Row: BotEventRow;
+        Insert: Omit<BotEventRow, "id" | "created_at"> & Partial<Pick<BotEventRow, "id" | "created_at">>;
+        Update: Partial<BotEventRow>;
         Relationships: [];
       };
     };
