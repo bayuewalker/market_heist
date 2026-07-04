@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import type { SignalRow, SignalStatus } from "@/lib/supabase/types";
 
 const TRANSITIONS: { status: SignalStatus; label: string }[] = [
@@ -22,22 +21,18 @@ export default function SignalActions({ signal }: { signal: SignalRow }) {
   async function setStatus(status: SignalStatus, label: string) {
     setPending(status);
     setError(null);
-    const supabase = createClient();
 
-    const { error: updateError } = await supabase.from("signals").update({ status }).eq("id", signal.id);
-    if (updateError) {
-      setError(updateError.message);
+    const res = await fetch(`/api/signals/${signal.id}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status, label }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? "Update failed.");
       setPending(null);
       return;
     }
-
-    // Best-effort lifecycle log — a failure here shouldn't undo the status
-    // change the member just made.
-    await supabase.from("signal_updates").insert({
-      signal_id: signal.id,
-      status_change: status,
-      update_text: `Marked "${label}" by the member.`,
-    });
 
     router.refresh();
     setPending(null);

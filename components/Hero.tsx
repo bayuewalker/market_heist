@@ -73,7 +73,7 @@ export default function Hero() {
             </Button>
           </div>
 
-          <dl className="mt-10 grid w-full max-w-md grid-cols-3 gap-4 border-t border-border-subtle pt-6">
+          <dl className="mt-10 grid w-full max-w-md grid-cols-3 gap-3 border-t border-border-subtle pt-6 sm:gap-4">
             {stats.map((stat) => (
               <div key={stat.label} className="flex flex-col">
                 <dt className="order-2 text-xs text-muted">{stat.label}</dt>

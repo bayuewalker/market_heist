@@ -91,17 +91,26 @@ create trigger signals_guard_immutable_fields
   for each row execute function public.guard_signals_immutable_fields();
 
 -- ---------------------------------------------------------------------------
--- signal_updates: lifecycle/status-change history. Same ownership model as
--- signals — the owning member can read/insert their own signal's updates
--- (self-tracking outcomes), admins see everything.
+-- signal_updates: lifecycle/status-change history. Same read model as
+-- signals — the owning member reads their own signal's updates
+-- (self-tracking outcomes), admins see everything. There is no insert
+-- policy: the only writer is record_signal_status_change() below, called
+-- server-side via the service role after the caller's ownership/role has
+-- already been checked — see status_change's CHECK constraint for why a
+-- direct client insert would be unsafe anyway.
 -- ---------------------------------------------------------------------------
 create table if not exists public.signal_updates (
   id            uuid primary key default gen_random_uuid(),
   signal_id     uuid not null references public.signals (id) on delete cascade,
   update_text   text,
-  status_change text,
+  status_change text not null,
   created_at    timestamptz not null default now()
 );
+
+alter table public.signal_updates
+  drop constraint if exists signal_updates_status_change_check,
+  add constraint signal_updates_status_change_check
+    check (status_change in ('pending', 'active', 'hit_tp1', 'hit_tp2', 'hit_tp3', 'invalidated', 'expired', 'manual_closed'));
 
 create index if not exists signal_updates_signal_idx on public.signal_updates (signal_id, created_at desc);
 
@@ -117,7 +126,40 @@ create policy "admin read all signal updates"
   on public.signal_updates for select
   using (public.is_admin());
 
-drop policy if exists "insert own signal updates" on public.signal_updates;
-create policy "insert own signal updates"
-  on public.signal_updates for insert
-  with check (exists (select 1 from public.signals s where s.id = signal_id and s.user_id = auth.uid()));
+-- ---------------------------------------------------------------------------
+-- record_signal_status_change: the only writer of both signals.status and
+-- signal_updates. Atomic — if the history insert fails (e.g. an invalid
+-- status_change), the status update rolls back with it, so a signal can
+-- never end up transitioned with no matching history row. Callers (member
+-- self-tracking and admin override routes) authorize the request themselves
+-- before calling this via the service-role client, same trust model as
+-- claim_mission()/append_heist_points() in migration 0012.
+-- ---------------------------------------------------------------------------
+create or replace function public.record_signal_status_change(
+  p_signal_id uuid,
+  p_status text,
+  p_update_text text
+)
+returns public.signals
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_signal public.signals;
+begin
+  update public.signals
+    set status = p_status
+    where id = p_signal_id
+    returning * into v_signal;
+
+  if not found then
+    raise exception 'Unknown signal.';
+  end if;
+
+  insert into public.signal_updates (signal_id, status_change, update_text)
+  values (p_signal_id, p_status, p_update_text);
+
+  return v_signal;
+end;
+$$;

@@ -87,7 +87,7 @@ export type SignalUpdateRow = {
   id: string;
   signal_id: string;
   update_text: string | null;
-  status_change: string | null;
+  status_change: SignalStatus;
   created_at: string;
 };
 
@@ -461,6 +461,10 @@ export type Database = {
           p_reason: string | null;
         };
         Returns: HeistPointsLedgerRow;
+      };
+      record_signal_status_change: {
+        Args: { p_signal_id: string; p_status: SignalStatus; p_update_text: string | null };
+        Returns: SignalRow;
       };
     };
     Enums: Record<string, never>;

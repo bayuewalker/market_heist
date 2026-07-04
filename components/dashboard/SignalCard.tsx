@@ -84,13 +84,13 @@ export default function SignalCard({
         </div>
       </header>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
         {[
           { label: "Entry", value: fmt(signal.entry), accent: false },
           { label: "Stop", value: fmt(signal.stop), accent: false },
           { label: "Invalidation", value: fmt(signal.invalidation), accent: false },
         ].map((cell) => (
-          <div key={cell.label} className="rounded-lg border border-border-subtle bg-background/50 px-2.5 py-2 text-center">
+          <div key={cell.label} className="rounded-lg border border-border-subtle bg-background/50 px-1.5 py-2 text-center sm:px-2.5">
             <p className="text-[10px] uppercase tracking-wide text-muted">{cell.label}</p>
             <p className="text-sm font-semibold tabular-nums text-foreground">{cell.value}</p>
           </div>
@@ -98,13 +98,13 @@ export default function SignalCard({
       </div>
 
       {(signal.tp1 !== null || signal.tp2 !== null || signal.tp3 !== null) && (
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {[
             { label: "TP1", value: signal.tp1 },
             { label: "TP2", value: signal.tp2 },
             { label: "TP3", value: signal.tp3 },
           ].map((cell) => (
-            <div key={cell.label} className="rounded-lg border border-accent/20 bg-accent/5 px-2.5 py-2 text-center">
+            <div key={cell.label} className="rounded-lg border border-accent/20 bg-accent/5 px-1.5 py-2 text-center sm:px-2.5">
               <p className="text-[10px] uppercase tracking-wide text-muted">{cell.label}</p>
               <p className="text-sm font-semibold tabular-nums text-accent-strong">{fmt(cell.value)}</p>
             </div>
