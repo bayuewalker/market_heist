@@ -58,3 +58,44 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
 
   return NextResponse.json({ mission: updated });
 }
+
+export async function DELETE(_request: Request, ctx: { params: Promise<{ id: string }> }) {
+  const { id: missionId } = await ctx.params;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "You must be logged in." }, { status: 401 });
+
+  const { data: requester } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (requester?.role !== "admin") {
+    return NextResponse.json({ error: "Admin access required." }, { status: 403 });
+  }
+
+  const admin = createAdminClient();
+  const { data: deleted, error } = await admin.from("missions").delete().eq("id", missionId).select().maybeSingle();
+  if (error) {
+    // A foreign-key violation (23503) means members already have user_missions
+    // rows against this mission — disabling it (is_active = false) is the
+    // right move there, not deleting history out from under them.
+    const message =
+      error.code === "23503"
+        ? "This mission already has member progress against it — disable it instead of deleting."
+        : error.message;
+    return NextResponse.json({ error: message }, { status: error.code === "23503" ? 409 : 500 });
+  }
+  if (!deleted) {
+    return NextResponse.json({ error: "Mission not found." }, { status: 404 });
+  }
+
+  await writeAuditLog(admin, {
+    actorId: user.id,
+    action: "mission.delete",
+    targetType: "mission",
+    targetId: missionId,
+    meta: {},
+  });
+
+  return NextResponse.json({ ok: true });
+}

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Coins, MessageSquareText, Radar, ShieldCheck, Sparkles, Trophy, TrendingUp } from "lucide-react";
+import { Coins, MessageSquareText, Radar, Rocket, ShieldCheck, Sparkles, Trophy, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPointsBalance, getRankForPoints, syncMissionCompletions } from "@/lib/missions";
+import { syncGenesisEligibility } from "@/lib/genesis";
 import SignalCard from "@/components/dashboard/SignalCard";
 import Button from "@/components/ui/Button";
 
@@ -16,7 +17,8 @@ export default async function DashboardOverview() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  await syncMissionCompletions(createAdminClient(), user.id);
+  const admin = createAdminClient();
+  await syncMissionCompletions(admin, user.id);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -77,6 +79,11 @@ export default async function DashboardOverview() {
   const rewardTotal = (pendingRewards ?? []).reduce((sum, r) => sum + Number(r.amount), 0);
   const fmtUsd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
+  const { checklist: genesisChecklist, isEligible: genesisEligible } = await syncGenesisEligibility(admin, user.id);
+  const genesisMet = Object.values(genesisChecklist).filter(Boolean).length;
+  const genesisTotal = Object.values(genesisChecklist).length;
+  const genesisValue = genesisEligible ? "Eligible" : `${genesisMet}/${genesisTotal}`;
+
   const stats = [
     { label: "Total signals", value: String(totalCount ?? 0), Icon: Radar },
     { label: "Today", value: String(usedToday), Icon: TrendingUp },
@@ -87,6 +94,7 @@ export default async function DashboardOverview() {
     { label: rank?.name ?? "Rookie Heister", value: `${points} HP`, Icon: Trophy, href: "/dashboard/missions" },
     { label: "Verified brokers", value: String(verifiedBrokerCount ?? 0), Icon: ShieldCheck, href: "/dashboard/broker" },
     { label: "Pending + approved rewards", value: fmtUsd(rewardTotal), Icon: Coins, href: "/dashboard/rewards" },
+    { label: "Genesis Pass", value: genesisValue, Icon: Rocket, href: "/dashboard/genesis" },
   ];
 
   return (
@@ -111,7 +119,7 @@ export default async function DashboardOverview() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {commandCenterStats.map((stat) => (
           <Link
             key={stat.label}
