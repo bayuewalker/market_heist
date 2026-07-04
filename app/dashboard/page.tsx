@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MessageSquareText, Radar, Sparkles, TrendingUp } from "lucide-react";
+import { Coins, MessageSquareText, Radar, ShieldCheck, Sparkles, Trophy, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getPointsBalance, getRankForPoints, syncMissionCompletions } from "@/lib/missions";
 import SignalCard from "@/components/dashboard/SignalCard";
 import Button from "@/components/ui/Button";
 
@@ -13,6 +15,8 @@ export default async function DashboardOverview() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  await syncMissionCompletions(createAdminClient(), user.id);
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -29,7 +33,14 @@ export default async function DashboardOverview() {
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
 
-  const [{ count: totalCount }, { count: todayCount }, { data: recent }, { data: character }] = await Promise.all([
+  const [
+    { count: totalCount },
+    { count: todayCount },
+    { data: recent },
+    { data: character },
+    { count: verifiedBrokerCount },
+    { data: pendingRewards },
+  ] = await Promise.all([
     supabase.from("signals").select("id", { count: "exact", head: true }).eq("user_id", user.id),
     supabase
       .from("signals")
@@ -48,6 +59,12 @@ export default async function DashboardOverview() {
       .eq("is_active", true)
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("broker_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("status", "verified"),
+    supabase.from("reward_ledger").select("amount").eq("user_id", user.id).in("status", ["pending", "approved"]),
   ]);
 
   const limit = plan?.signal_limit ?? null;
@@ -55,10 +72,21 @@ export default async function DashboardOverview() {
   const remaining = limit === null ? "∞" : Math.max(0, limit - usedToday);
   const greetingName = profile?.full_name?.trim() || user.email?.split("@")[0] || "Heister";
 
+  const points = await getPointsBalance(supabase, user.id);
+  const rank = await getRankForPoints(supabase, points);
+  const rewardTotal = (pendingRewards ?? []).reduce((sum, r) => sum + Number(r.amount), 0);
+  const fmtUsd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+
   const stats = [
     { label: "Total signals", value: String(totalCount ?? 0), Icon: Radar },
     { label: "Today", value: String(usedToday), Icon: TrendingUp },
     { label: "Remaining today", value: String(remaining), Icon: Sparkles },
+  ];
+
+  const commandCenterStats = [
+    { label: rank?.name ?? "Rookie Heister", value: `${points} HP`, Icon: Trophy, href: "/dashboard/missions" },
+    { label: "Verified brokers", value: String(verifiedBrokerCount ?? 0), Icon: ShieldCheck, href: "/dashboard/broker" },
+    { label: "Pending + approved rewards", value: fmtUsd(rewardTotal), Icon: Coins, href: "/dashboard/rewards" },
   ];
 
   return (
@@ -82,6 +110,24 @@ export default async function DashboardOverview() {
           </div>
         </div>
       )}
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        {commandCenterStats.map((stat) => (
+          <Link
+            key={stat.label}
+            href={stat.href}
+            className="flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface p-5 transition-colors hover:border-accent/40"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-accent-strong ring-1 ring-inset ring-accent/25">
+              <stat.Icon className="h-5 w-5" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-foreground">{stat.value}</p>
+              <p className="text-xs text-muted">{stat.label}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => (

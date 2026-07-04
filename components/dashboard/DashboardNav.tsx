@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
+  Trophy,
   UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -23,6 +24,7 @@ type NavItem = { href: string; label: string; icon: LucideIcon };
 const items: NavItem[] = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/broker", label: "Broker Station", icon: Landmark },
+  { href: "/dashboard/missions", label: "Missions", icon: Trophy },
   { href: "/dashboard/rewards", label: "Rewards", icon: Coins },
   { href: "/dashboard/signals", label: "Signals", icon: Radar },
   { href: "/dashboard/request", label: "Request signal", icon: Sparkles },
