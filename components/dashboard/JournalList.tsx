@@ -21,7 +21,9 @@ export default function JournalList({ trades }: { trades: TradeJournalRow[] }) {
   const router = useRouter();
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Record<string, string>>({});
-  const [reviewErrors, setReviewErrors] = useState<Record<string, { message: string; planGated: boolean }>>({});
+  const [reviewErrors, setReviewErrors] = useState<
+    Record<string, { message: string; code?: "plan_gated" | "consent_required" }>
+  >({});
   const [deleting, setDeleting] = useState<string | null>(null);
 
   async function getReview(id: string) {
@@ -41,13 +43,13 @@ export default function JournalList({ trades }: { trades: TradeJournalRow[] }) {
       if (!res.ok) {
         setReviewErrors((prev) => ({
           ...prev,
-          [id]: { message: data?.error || "Review failed.", planGated: data?.code === "plan_gated" || data?.code === "consent_required" },
+          [id]: { message: data?.error || "Review failed.", code: data?.code },
         }));
         return;
       }
       setReviews((prev) => ({ ...prev, [id]: data.answer }));
     } catch {
-      setReviewErrors((prev) => ({ ...prev, [id]: { message: "Review failed.", planGated: false } }));
+      setReviewErrors((prev) => ({ ...prev, [id]: { message: "Review failed." } }));
     } finally {
       setReviewing(null);
     }
@@ -130,11 +132,18 @@ export default function JournalList({ trades }: { trades: TradeJournalRow[] }) {
           {reviewErrors[trade.id] && (
             <p role="alert" className="text-xs text-rose-300">
               {reviewErrors[trade.id].message}
-              {reviewErrors[trade.id].planGated && (
+              {reviewErrors[trade.id].code === "plan_gated" && (
                 <>
                   {" "}
                   <Link href="/dashboard/billing" className="font-medium underline">Upgrade to Pro</Link> for Mentor
                   reviews.
+                </>
+              )}
+              {reviewErrors[trade.id].code === "consent_required" && (
+                <>
+                  {" "}
+                  Visit <Link href="/dashboard/ai-mentor" className="font-medium underline">Mentor Heister</Link> to
+                  accept the AI data consent gate first.
                 </>
               )}
             </p>

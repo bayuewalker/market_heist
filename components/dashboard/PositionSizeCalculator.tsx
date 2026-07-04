@@ -60,29 +60,29 @@ export default function PositionSizeCalculator() {
       <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="accountSize" className="text-sm font-medium text-foreground">Account size</label>
-          <input id="accountSize" required type="number" min="0" step="any" value={accountSize}
+          <input id="accountSize" required type="number" min="0.00000001" step="any" value={accountSize}
             onChange={(e) => setAccountSize(e.target.value)} placeholder="10000" className={fieldClass} />
         </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="riskPct" className="text-sm font-medium text-foreground">Risk %</label>
-          <input id="riskPct" required type="number" min="0" max="100" step="any" value={riskPct}
+          <input id="riskPct" required type="number" min="0.00000001" max="100" step="any" value={riskPct}
             onChange={(e) => setRiskPct(e.target.value)} placeholder="1" className={fieldClass} />
         </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="entry" className="text-sm font-medium text-foreground">Entry</label>
-          <input id="entry" required type="number" min="0" step="any" value={entry}
+          <input id="entry" required type="number" min="0.00000001" step="any" value={entry}
             onChange={(e) => setEntry(e.target.value)} placeholder="65000" className={fieldClass} />
         </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="stop" className="text-sm font-medium text-foreground">Stop</label>
-          <input id="stop" required type="number" min="0" step="any" value={stop}
+          <input id="stop" required type="number" min="0.00000001" step="any" value={stop}
             onChange={(e) => setStop(e.target.value)} placeholder="63500" className={fieldClass} />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <label htmlFor="takeProfit" className="text-sm font-medium text-foreground">
             Take profit <span className="text-muted">(optional)</span>
           </label>
-          <input id="takeProfit" type="number" min="0" step="any" value={takeProfit}
+          <input id="takeProfit" type="number" min="0.00000001" step="any" value={takeProfit}
             onChange={(e) => setTakeProfit(e.target.value)} placeholder="68000" className={fieldClass} />
         </div>
 

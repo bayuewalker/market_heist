@@ -98,8 +98,9 @@ export default async function MentorPage() {
 
   const stats = journalRows ? computeJournalStats(journalRows) : null;
   const overtradingContext = stats
-    ? `Member has logged ${stats.totalTrades} trades, discipline score ${stats.disciplineScore ?? "n/a"}%, ` +
-      `${stats.tradesToday} trades today. Overtrading flagged: ${stats.overtrading ? "yes" : "no"}.`
+    ? `Based on the member's last ${stats.totalTrades} logged trades (not necessarily their lifetime total): ` +
+      `discipline score ${stats.disciplineScore ?? "n/a"}%, ${stats.tradesToday} logged today. ` +
+      `Overtrading flagged: ${stats.overtrading ? "yes" : "no"}.`
     : null;
 
   const brokerContext = `Member has ${verifiedBrokerCount ?? 0} verified broker account(s).`;

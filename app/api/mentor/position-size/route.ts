@@ -42,7 +42,6 @@ export async function POST(request: Request) {
   const riskPct = toPositiveNumber(body.riskPct);
   const entry = toPositiveNumber(body.entry);
   const stop = toPositiveNumber(body.stop);
-  const takeProfit = body.takeProfit !== undefined ? toPositiveNumber(body.takeProfit) : null;
 
   if (!accountSize || !riskPct || !entry || !stop) {
     return NextResponse.json({ error: "accountSize, riskPct, entry, and stop must all be positive numbers." }, { status: 400 });
@@ -54,16 +53,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Entry and stop can't be the same price." }, { status: 400 });
   }
 
+  let takeProfit: number | null = null;
+  if (body.takeProfit !== undefined && body.takeProfit !== null && body.takeProfit !== "") {
+    takeProfit = toPositiveNumber(body.takeProfit);
+    if (!takeProfit) {
+      return NextResponse.json({ error: "takeProfit must be a positive number if provided." }, { status: 400 });
+    }
+  }
+
   const result = calculatePositionSize({ accountSize, riskPct, entry, stop, takeProfit });
 
   const admin = createAdminClient();
-  await admin.from("ai_chat_sessions").insert({
+  const { error: logError } = await admin.from("ai_chat_sessions").insert({
     user_id: user.id,
     function: "position_size",
     input: { accountSize, riskPct, entry, stop, takeProfit },
     output: result.note,
     token_usage: 0,
   });
+  if (logError) console.error("Failed to write ai_chat_sessions row:", logError.message);
 
   return NextResponse.json(result);
 }

@@ -1,8 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
-
-const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const DEFAULT_MODEL = "meta/llama-3.3-70b-instruct";
+import { callNvidiaChat } from "@/lib/nvidia-client";
 
 // Cost guard: at most this many Mentor calls per user per rolling minute,
 // mirrored from the same guard on POST /api/signals/generate.
@@ -57,52 +55,12 @@ const MENTOR_SYSTEM_PROMPT =
   "code, live-broker API wiring, or instructions to place real orders automatically. Keep " +
   "answers concise and actionable, under 200 words unless the user asks for more detail.";
 
-/** Strip invisible Unicode formatting characters, same guard as lib/nvidia.ts. */
-function sanitizeApiKey(key: string): string {
-  return key.replace(/[​-‏‪-‮﻿]/g, "").trim();
-}
-
-async function callMentorModel(messages: { role: "system" | "user"; content: string }[]): Promise<{
-  content: string;
-  tokenUsage: number;
-}> {
-  const rawApiKey = process.env.NVIDIA_API_KEY;
-  if (!rawApiKey) throw new Error("NVIDIA_API_KEY is not configured.");
-  const apiKey = sanitizeApiKey(rawApiKey);
-  const model = process.env.NVIDIA_MODEL || DEFAULT_MODEL;
-
-  const response = await fetch(NVIDIA_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.4,
-      top_p: 0.9,
-      max_tokens: 500,
-    }),
-  });
-
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`NVIDIA API error ${response.status}: ${detail.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  const content: string = data?.choices?.[0]?.message?.content ?? "";
-  const tokenUsage: number = Number(data?.usage?.total_tokens ?? 0);
-  return { content: content.trim(), tokenUsage: Number.isFinite(tokenUsage) ? tokenUsage : 0 };
-}
-
 export async function mentorChat(input: {
   message: string;
   context?: string;
 }): Promise<{ answer: string; tokenUsage: number }> {
   const user = input.context ? `${input.context}\n\nMember's question: ${input.message}` : input.message;
-  const { content, tokenUsage } = await callMentorModel([
+  const { content, tokenUsage } = await callNvidiaChat([
     { role: "system", content: MENTOR_SYSTEM_PROMPT },
     { role: "user", content: user },
   ]);
@@ -116,7 +74,7 @@ export async function mentorBotTemplate(input: {
     `Describe a PAPER-TRADING / BACKTEST-ONLY bot template for this strategy idea — plain-language ` +
     `rules a member could track by hand or backtest, never auto-execution code or live order placement:\n\n` +
     input.strategyDescription;
-  const { content, tokenUsage } = await callMentorModel([
+  const { content, tokenUsage } = await callNvidiaChat([
     { role: "system", content: MENTOR_SYSTEM_PROMPT },
     { role: "user", content: user },
   ]);
@@ -138,7 +96,7 @@ export async function mentorTradeReview(input: {
     `Entry: ${input.entry ?? "unspecified"}\nExit: ${input.exitPrice ?? "unspecified"}\n` +
     `Outcome: ${input.outcome ?? "unspecified"}\nFollowed trading plan: ${input.followedPlan ? "yes" : "no"}\n` +
     `Member notes: ${input.notes || "none"}`;
-  const { content, tokenUsage } = await callMentorModel([
+  const { content, tokenUsage } = await callNvidiaChat([
     { role: "system", content: MENTOR_SYSTEM_PROMPT },
     { role: "user", content: user },
   ]);

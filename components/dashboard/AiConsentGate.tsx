@@ -10,7 +10,7 @@ const DATA_USES = [
   { label: "AI Data", detail: "Your questions and Mentor's answers are sent to the AI provider to generate a response." },
   { label: "Journal Data", detail: "Trades you log in your journal may be summarized for Mentor's trade-review and journal-summary answers." },
   { label: "Broker Activity Data", detail: "Your verified broker status may inform Mentor's broker-route suggestions." },
-  { label: "Reward Data", detail: "Your points/rank/reward history may inform Mentor's context, never shared outside your own session." },
+  { label: "Reward Data", detail: "Your points/rank/reward history may be included in a prompt sent to the AI provider so Mentor can give context-aware answers." },
 ];
 
 export default function AiConsentGate() {
@@ -38,6 +38,7 @@ export default function AiConsentGate() {
       return;
     }
     router.refresh();
+    setPending(false);
   }
 
   return (

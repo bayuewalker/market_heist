@@ -64,13 +64,14 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
-  await admin.from("ai_chat_sessions").insert({
+  const { error: logError } = await admin.from("ai_chat_sessions").insert({
     user_id: user.id,
     function: "trade_review",
     input: { journalEntryId },
     output: result.answer,
     token_usage: result.tokenUsage,
   });
+  if (logError) console.error("Failed to write ai_chat_sessions row:", logError.message);
 
   return NextResponse.json({ answer: result.answer });
 }
