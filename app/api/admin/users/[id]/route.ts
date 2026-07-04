@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getOrCreateReferralCode } from "@/lib/captain";
+import { writeAuditLog } from "@/lib/rewards";
 import type { ProfileRow, UserRole } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -75,6 +76,14 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   } else if (previousRole === "captain" && update.role !== undefined && update.role !== "captain") {
     await admin.from("referral_codes").update({ active: false }).eq("captain_id", targetId);
   }
+
+  await writeAuditLog(admin, {
+    actorId: user.id,
+    action: "user.update",
+    targetType: "profile",
+    targetId: targetId,
+    meta: update,
+  });
 
   return NextResponse.json({ profile: updated });
 }

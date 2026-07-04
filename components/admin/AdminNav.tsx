@@ -7,6 +7,7 @@ import {
   Activity,
   Coins,
   FileSpreadsheet,
+  HeartHandshake,
   Landmark,
   LayoutDashboard,
   Menu,
@@ -34,6 +35,7 @@ const items: NavItem[] = [
   { href: "/admin/missions", label: "Missions", icon: Trophy },
   { href: "/admin/signals", label: "Signals", icon: Radar },
   { href: "/admin/genesis", label: "Genesis Pass", icon: Rocket },
+  { href: "/admin/donations", label: "Donations", icon: HeartHandshake },
   { href: "/admin/payments", label: "Payments", icon: Wallet },
   { href: "/admin/character", label: "Character", icon: UserRound },
 ];

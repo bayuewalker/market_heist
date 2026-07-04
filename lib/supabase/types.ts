@@ -342,6 +342,15 @@ export type GenesisEligibilityRow = {
   exported_at: string | null;
 };
 
+export type DonationLedgerRow = {
+  id: string;
+  period: string;
+  amount: number;
+  description: string;
+  proof_url: string | null;
+  created_at: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -551,6 +560,13 @@ export type Database = {
         Insert: Omit<GenesisEligibilityRow, "id" | "campaign_key" | "is_eligible" | "reservation_id" | "requirements_json" | "eligible_at" | "exported_at"> &
           Partial<Pick<GenesisEligibilityRow, "id" | "campaign_key" | "is_eligible" | "reservation_id" | "requirements_json" | "eligible_at" | "exported_at">>;
         Update: Partial<GenesisEligibilityRow>;
+        Relationships: [];
+      };
+      donation_ledger: {
+        Row: DonationLedgerRow;
+        Insert: Omit<DonationLedgerRow, "id" | "proof_url" | "created_at"> &
+          Partial<Pick<DonationLedgerRow, "id" | "proof_url" | "created_at">>;
+        Update: Partial<DonationLedgerRow>;
         Relationships: [];
       };
     };

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { writeAuditLog } from "@/lib/rewards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +54,13 @@ export async function GET() {
       .eq("campaign_key", "genesis")
       .eq("is_eligible", true);
   }
+
+  await writeAuditLog(admin, {
+    actorId: user.id,
+    action: "genesis.export",
+    targetType: "genesis_eligibility",
+    meta: { row_count: eligible?.length ?? 0 },
+  });
 
   return new NextResponse(csv, {
     headers: {

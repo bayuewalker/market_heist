@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { writeAuditLog } from "@/lib/rewards";
 import type { BrokerAccountRow, BrokerAccountStatus } from "@/lib/supabase/types";
 
 export const runtime = "nodejs";
@@ -74,6 +75,14 @@ export async function PATCH(request: Request, ctx: { params: Promise<{ id: strin
   if (error || !updated) {
     return NextResponse.json({ error: error?.message ?? "Update failed." }, { status: 500 });
   }
+
+  await writeAuditLog(admin, {
+    actorId: user.id,
+    action: "broker_account.verify",
+    targetType: "broker_account",
+    targetId: accountId,
+    meta: update,
+  });
 
   return NextResponse.json({ account: updated });
 }

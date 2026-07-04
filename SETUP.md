@@ -28,6 +28,7 @@ migrations **in order**:
 13. [`supabase/migrations/0013_signal_engine_v2.sql`](./supabase/migrations/0013_signal_engine_v2.sql)
 14. [`supabase/migrations/0014_mentor_journal.sql`](./supabase/migrations/0014_mentor_journal.sql)
 15. [`supabase/migrations/0015_leaderboard_captain_genesis.sql`](./supabase/migrations/0015_leaderboard_captain_genesis.sql)
+16. [`supabase/migrations/0016_trust_compliance.sql`](./supabase/migrations/0016_trust_compliance.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -324,14 +325,62 @@ figures into `reward_ledger` entries:
   (`lib/rewards.ts` — Basic/Pro/Elite rates from blueprint §5, tune there).
 - **Donation** / **Operation** = a fixed percentage of `backend_commission`
   (also in `lib/rewards.ts`). These have no individual recipient.
-- Captain/leaderboard/campaign allocations aren't computed yet — there's no
-  captain network or leaderboard to credit until a later milestone.
+- **Captain** reward = a percentage of `backend_commission`, scaled by the
+  referring captain's current tier rate (`lib/captain.ts`'s `getCaptainTier`),
+  only when the matched member was referred by a captain (§23, added in M11).
+- Leaderboard/campaign allocations aren't computed here — a leaderboard
+  payout is a separate, periodic, admin-triggered action, and campaign has no
+  recipient system until the V2 Campaign Engine.
 
 New entries land as `pending`. Admins bulk-select rows on `/admin/rewards` to
 **Approve** (`pending` → `approved`) then **Mark paid** (`approved` → `paid`);
 both actions write an `audit_logs` row. Members see their own totals and line
 items on `/dashboard/rewards` — public framing only ("trading fee reward"),
 never the backend commission rate itself.
+
+### Trust & Compliance Layer
+
+Migration `0016` adds `donation_ledger` (publicly readable via `using (true)`
+RLS — a transparency report is meant for anyone, signed in or not; writes are
+admin-only through `/admin/donations`). Every required Trust & Compliance
+page from §15/§24.1 is published and linked from the `/trust` hub (and the
+site footer):
+
+| Page | Route | Notes |
+| --- | --- | --- |
+| Risk Disclaimer | `/risk` | Pre-existing (M0/M1) |
+| Affiliate Disclosure | `/affiliate-disclosure` | New (M12) |
+| Reward Policy | `/reward-policy` | New (M12) |
+| Signal Archive | `/dashboard/signals` | Pre-existing (M9) — member-only, not a standalone legal page |
+| Donation Ledger | `/donation-ledger` | New (M12) — DB-backed, reads `donation_ledger` |
+| Transparency Report | `/transparency-report` | New (M12) — placeholder until the first full month of live activity |
+| Terms & Privacy | `/terms`, `/privacy` | Pre-existing (M0/M1) |
+| AI Data Consent | `/ai-data-consent` | New (M12) — linked from `AiConsentGate.tsx` |
+
+`audit_logs` now covers every admin mutation endpoint: broker UID
+verification, user plan/role changes, character config edits, Genesis CSV
+export, and donation ledger entries, in addition to the reward/mission/
+signal/commission actions already logged from earlier milestones. The
+trends/leaderboard cron routes only log when a **signed-in admin** manually
+triggers them — the routine cron-triggered runs are expected/automatic and
+would just be noise in an audit trail meant to record deliberate admin
+action.
+
+**Elite pricing** stays "Coming Soon" (not the blueprint's pitched
+$99/month) — an accepted, documented divergence: Elite's advertised
+features (Bot Template Builder, an Elite-exclusive leaderboard) aren't built
+yet, and charging for an incomplete tier would contradict the compliance
+copy rule below. Revisit once those features ship.
+
+**Public Copy Rule** (§24.1) — a full-codebase audit found no violations.
+Use "AI-assisted trading intelligence," "Verified broker reward,"
+"Risk-managed signal," "Trading discipline," "Transparent leaderboard,"
+"Mission-based community," "Genesis eligibility." Avoid "guaranteed
+profit," "passive income," "no loss," "fixed return," "managed account,"
+"token promise," "NFT speculation." The one borderline string in the
+codebase — `CaptainCodeCard.tsx`'s "not MLM, not passive income, and not an
+investment return" — is a negated disclaimer (it explicitly *disclaims*
+those terms, matching §23's own required framing), not a violation.
 
 ---
 
@@ -389,3 +438,45 @@ pages still render, but auth and signal generation require real keys.
 - **Backups**: Supabase takes automatic daily backups on paid plans; on the
   free tier, periodically export critical tables (`profiles`, `payments`,
   `signals`) via the SQL Editor or `pg_dump` if you need your own copy.
+
+---
+
+## Launch QA Checklist (§15 MVP V1 Acceptance Criteria)
+
+Every line of the blueprint's §15 acceptance list, mapped to the shipped
+feature/file. **PASS** = verified by reading the code; **NEEDS MANUAL
+VERIFICATION** = requires a live, Supabase-connected environment (a running
+Telegram bot, a real broker webhook, etc.) that isn't available from a
+code-only review — verify these against a real deployment before calling
+MVP V1 launched.
+
+| Criterion | Status | Where |
+| --- | --- | --- |
+| User can register/login with Telegram | NEEDS MANUAL VERIFICATION | `/login` supports email/password today; Telegram Login (M13, issue #26) is a separate, deferred milestone — see below |
+| Telegram Bot can onboard users | PASS (code) / NEEDS MANUAL VERIFICATION (live bot) | `app/api/telegram/webhook/route.ts`, `lib/telegram.ts` — needs a real `TELEGRAM_BOT_TOKEN` + webhook to confirm end-to-end |
+| User can access dashboard | PASS | `/dashboard`, gated by `createClient()` + Supabase Auth session |
+| User can open broker referral link | PASS | `/dashboard/brokers`, `brokers.referral_base_url` |
+| User can submit broker UID | PASS | `POST /api/broker-accounts/submit-uid` |
+| Admin can verify UID | PASS | `PATCH /api/admin/broker-accounts/[id]/verify`, now audit-logged (M12) |
+| Admin can import commission/volume data | PASS | `/admin/commissions`, `POST /api/admin/commissions/commit` |
+| User can see safe reward status | PASS | `/dashboard/rewards` — public framing only, no backend commission rate exposed |
+| Admin can create signal | **Accepted divergence** (documented since M0/M1) | Signals are member-requested + AI-generated (`POST /api/signals/generate`), not admin-curated — a deliberate architecture choice recorded in `WORKING_PLAN.md`'s accepted-divergences list, not a gap |
+| User can see signal and archive | PASS | `/dashboard/signals` (current + archive), `/dashboard/request` |
+| GPT Mentor can explain signal and position sizing | PASS | `lib/mentor.ts` (`chat`, `position_size` functions), `/dashboard/ai-mentor` |
+| User can complete missions | PASS | `/dashboard/missions`, `claim_mission` RPC |
+| Heist Points are logged correctly | PASS | `heist_points_ledger`, `append_heist_points` RPC (atomic, advisory-locked) |
+| Heister Rank is calculated | PASS | `heister_ranks`, computed from lifetime points |
+| Leaderboard V1 works | PASS | `/dashboard/leaderboard`, `lib/leaderboard.ts`, 6-hour Vercel Cron recompute |
+| Genesis eligibility tracker works | PASS | `/dashboard/genesis`, `lib/genesis.ts`'s sticky pull-based checklist |
+| The Playmaker appears in landing, bot, dashboard, and missions | PARTIAL | `character_configs` (configurable via `/admin/character`) renders in the Telegram bot's `/start` intro (`lib/telegram-commands.ts`), the dashboard note (`app/dashboard/page.tsx`), and the AI signal note prefix (`app/api/signals/generate/route.ts`) — **not** wired into the marketing landing page or the missions page specifically; those two integration points remain open follow-up work, not a blocker for MVP V1 |
+| Trust pages are published | PASS | `/trust` hub + all 8 pages in the table above (M12) |
+| Audit logs capture admin actions | PASS | `audit_logs` + `writeAuditLog()`; backfilled in M12 to cover every admin mutation endpoint (broker verify, user update, character config, Genesis export, plus the pre-existing mission/reward/signal/commission/donation actions) |
+| No MVP-excluded features are accidentally shipped | PASS | No V2-scoped features (fraud engine, Campaign Engine, Stripe billing, multi-language) are present in the codebase |
+
+### M13 · Telegram Login
+
+Blueprint §15 lists Telegram login as an acceptance criterion, but
+`WORKING_PLAN.md` scopes it as **M13 (issue #26), P2/deferred** — a
+separate milestone from the Telegram *bot* linking already shipped in M7.
+Today, `/login` is email/password only; Telegram OAuth as a login method is
+tracked and built separately, not part of M12's scope.
