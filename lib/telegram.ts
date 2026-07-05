@@ -91,9 +91,6 @@ export async function notifyUserByTelegram(
   text: string,
   opts: { buttons?: InlineButton[][] } = {},
 ): Promise<void> {
-  const { botToken } = await getTelegramBotConfig(admin);
-  if (!botToken) return;
-
   const { data: link } = await admin
     .from("telegram_links")
     .select("telegram_id")
@@ -102,6 +99,9 @@ export async function notifyUserByTelegram(
   if (!link) return;
 
   try {
+    // sendTelegramMessage() resolves the bot token itself and throws if it's
+    // not configured — caught below, so there's no separate upfront check
+    // (and no redundant bot_settings read) here.
     await sendTelegramMessage(admin, link.telegram_id, text, opts);
   } catch {
     // Best-effort — a failed push must not break the caller's own flow.

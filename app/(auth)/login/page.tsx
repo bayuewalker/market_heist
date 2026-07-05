@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getTelegramBotConfig } from "@/lib/telegram-settings";
+import { getTelegramBotConfigForPublicPage } from "@/lib/telegram-settings";
 import AuthForm from "@/components/auth/AuthForm";
 
 export const metadata: Metadata = {
@@ -13,9 +12,9 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage() {
   // Telegram Login is additive — only render the widget when the bot is
   // actually configured for it (§2/M13's callback needs both to sign anyone
-  // in). Admin-set via /admin/settings, falling back to env vars.
-  const admin = createAdminClient();
-  const { botToken, botUsername } = await getTelegramBotConfig(admin);
+  // in). Uses the "safe" resolver since login must keep working even if the
+  // service-role client can't be built.
+  const { botToken, botUsername } = await getTelegramBotConfigForPublicPage();
   const telegramBotUsername = botToken && botUsername ? botUsername : undefined;
 
   return (
