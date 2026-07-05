@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { CheckCircle2, Circle, Trophy } from "lucide-react";
+import { CheckCircle2, Circle, MessageSquareText, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { syncMissionCompletions, getPointsBalance, getRankForPoints } from "@/lib/missions";
@@ -25,11 +25,12 @@ export default async function MissionsPage() {
   const admin = createAdminClient();
   await syncMissionCompletions(admin, user.id);
 
-  const [{ data: missions }, { data: userMissions }, points, { data: profile }] = await Promise.all([
+  const [{ data: missions }, { data: userMissions }, points, { data: profile }, { data: character }] = await Promise.all([
     supabase.from("missions").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
     supabase.from("user_missions").select("*").eq("user_id", user.id),
     getPointsBalance(admin, user.id),
     supabase.from("profiles").select("risk_profile").eq("id", user.id).single(),
+    supabase.from("character_configs").select("character_name, tagline").eq("is_active", true).limit(1).maybeSingle(),
   ]);
   const rank = await getRankForPoints(admin, points);
 
@@ -43,6 +44,16 @@ export default async function MissionsPage() {
           Complete missions to earn Heist Points and climb the Heister Rank ladder.
         </p>
       </header>
+
+      {character?.tagline && (
+        <div className="flex gap-3 rounded-2xl border border-accent/20 bg-accent/5 p-4">
+          <MessageSquareText className="h-5 w-5 shrink-0 text-accent-strong" aria-hidden="true" />
+          <p className="text-sm text-muted">
+            <span className="font-semibold text-foreground">{character.character_name}:</span> every mission below is
+            a step in the heist — complete them, earn Heist Points, and climb the Heister Rank. &ldquo;{character.tagline}&rdquo;
+          </p>
+        </div>
+      )}
 
       <div className="flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface p-5">
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent/10 text-accent-strong ring-1 ring-inset ring-accent/25">

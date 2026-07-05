@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, PlayCircle, Sparkles } from "lucide-react";
+import { ArrowRight, PlayCircle, Sparkles, UserRound } from "lucide-react";
 import Button from "./ui/Button";
 import Container from "./ui/Container";
 import HeroVisual from "./HeroVisual";
@@ -27,7 +27,15 @@ const stats = [
   { value: "2%", label: "Donated to kids" },
 ];
 
-export default function Hero({ telegramBotUsername }: { telegramBotUsername?: string }) {
+export default function Hero({
+  telegramBotUsername,
+  playmakerName,
+  playmakerTagline,
+}: {
+  telegramBotUsername?: string;
+  playmakerName?: string | null;
+  playmakerTagline?: string | null;
+}) {
   const [demoOpen, setDemoOpen] = useState(false);
 
   return (
@@ -73,6 +81,17 @@ export default function Hero({ telegramBotUsername }: { telegramBotUsername?: st
               See Demo
             </Button>
           </div>
+
+          {playmakerName && playmakerTagline && (
+            <div className="mt-8 flex w-full max-w-md items-center gap-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3 text-left">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent-strong ring-1 ring-inset ring-accent/25">
+                <UserRound className="h-4 w-4" aria-hidden="true" />
+              </div>
+              <p className="text-sm text-muted">
+                <span className="font-semibold text-foreground">{playmakerName}:</span> &ldquo;{playmakerTagline}&rdquo;
+              </p>
+            </div>
+          )}
 
           <dl className="mt-10 grid w-full max-w-md grid-cols-3 gap-3 border-t border-border-subtle pt-6 sm:gap-4">
             {stats.map((stat) => (
