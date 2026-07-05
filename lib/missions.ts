@@ -16,6 +16,7 @@ export const MISSION_TRIGGER_TYPES = [
   "read_first_signal",
   "complete_risk_profile",
   "refer_member",
+  "use_ai_mentor",
 ] as const;
 
 /**
@@ -106,6 +107,13 @@ async function isMissionSatisfied(admin: SupabaseClient<Database>, userId: strin
         .from("captain_networks")
         .select("id", { count: "exact", head: true })
         .eq("captain_id", userId);
+      return (count ?? 0) > 0;
+    }
+    case "use_ai_mentor": {
+      const { count } = await admin
+        .from("ai_chat_sessions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId);
       return (count ?? 0) > 0;
     }
     default:

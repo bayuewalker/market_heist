@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import Link from "next/link";
+import { ArrowDownRight, ArrowUpRight, Minus, Sparkles } from "lucide-react";
 import type { RiskLevel, SignalRow, SignalStatus } from "@/lib/supabase/types";
 
 const biasStyles: Record<
@@ -141,7 +142,16 @@ export default function SignalCard({
         )}
       </div>
 
-      {actions && <div className="flex items-center gap-2 border-t border-border-subtle pt-3">{actions}</div>}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-3">
+        <Link
+          href={`/dashboard/ai-mentor?signal=${signal.id}`}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-strong transition-colors hover:text-accent"
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          Ask Mentor Heister about this signal
+        </Link>
+        {actions && <div className="flex items-center gap-2">{actions}</div>}
+      </div>
     </article>
   );
 }
