@@ -23,6 +23,7 @@ const TRIGGER_TYPES = [
   { value: "read_first_signal", label: "Read first signal" },
   { value: "complete_risk_profile", label: "Complete risk profile" },
   { value: "refer_member", label: "Refer a member" },
+  { value: "use_ai_mentor", label: "Use AI Mentor Heist" },
 ];
 
 export default function CreateMissionForm() {

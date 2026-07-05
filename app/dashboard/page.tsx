@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Coins, MessageSquareText, Radar, Rocket, ShieldCheck, Sparkles, Trophy, TrendingUp } from "lucide-react";
+import { ArrowRight, Coins, MessageSquareText, Radar, Rocket, ShieldCheck, Sparkles, Trophy, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPointsBalance, getRankForPoints, syncMissionCompletions } from "@/lib/missions";
@@ -136,6 +136,27 @@ export default async function DashboardOverview() {
           </Link>
         ))}
       </div>
+
+      <Link
+        href="/dashboard/ai-mentor"
+        className="gradient-border group flex flex-col gap-4 rounded-2xl border border-border-subtle bg-surface p-5 transition-colors hover:border-accent/40 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent-strong ring-1 ring-inset ring-accent/25">
+            <Sparkles className="h-6 w-6" aria-hidden="true" />
+          </div>
+          <div>
+            <p className="font-semibold text-foreground">Ask Mentor Heister</p>
+            <p className="text-sm text-muted">
+              Explain a signal, size a position, or pressure-test a setup before you enter — educational, never a promise.
+            </p>
+          </div>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-[#06120d] transition-colors group-hover:bg-accent-strong sm:self-auto">
+          Ask Mentor
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </Link>
 
       <div className="grid gap-4 sm:grid-cols-3">
         {stats.map((stat) => (

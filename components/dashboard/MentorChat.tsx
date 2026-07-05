@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Loader2, Send, Sparkles } from "lucide-react";
 
 type ChatTurn = { role: "user" | "mentor"; text: string };
@@ -15,16 +15,33 @@ export default function MentorChat({
   journalSummaryContext,
   overtradingContext,
   brokerContext,
+  focusedSignalContext = null,
+  focusedSignalLabel = null,
 }: {
   latestSignalContext: string | null;
   journalSummaryContext: string | null;
   overtradingContext: string | null;
   brokerContext: string | null;
+  focusedSignalContext?: string | null;
+  focusedSignalLabel?: string | null;
 }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [message, setMessage] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const focusedMessage = `Explain this ${focusedSignalLabel ?? "signal"} in plain, risk-first language — the bias, entry, invalidation, targets, and what would make this setup wrong.`;
+
+  // When arriving from a signal card's "Ask Mentor about this signal" deep link,
+  // auto-ask about that specific signal once so the explanation is already
+  // generating on open. Ref-guarded so React's dev double-mount can't double-fire.
+  const autoAskedRef = useRef(false);
+  useEffect(() => {
+    if (autoAskedRef.current || !focusedSignalContext) return;
+    autoAskedRef.current = true;
+    send(focusedMessage, focusedSignalContext);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const quickActions = (
     [
@@ -102,6 +119,18 @@ export default function MentorChat({
           <p className="text-xs text-muted">Educational trading mentor — never a signal to auto-execute.</p>
         </div>
       </header>
+
+      {focusedSignalContext && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => send(focusedMessage, focusedSignalContext)}
+          className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent-strong transition-colors hover:bg-accent/15 disabled:opacity-50"
+        >
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+          Explain {focusedSignalLabel ?? "this signal"} again
+        </button>
+      )}
 
       {quickActions.length > 0 && (
         <div className="flex flex-wrap gap-2">

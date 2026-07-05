@@ -30,6 +30,7 @@ migrations **in order**:
 15. [`supabase/migrations/0015_leaderboard_captain_genesis.sql`](./supabase/migrations/0015_leaderboard_captain_genesis.sql)
 16. [`supabase/migrations/0016_trust_compliance.sql`](./supabase/migrations/0016_trust_compliance.sql)
 17. [`supabase/migrations/0017_reward_ledger_delete_guard.sql`](./supabase/migrations/0017_reward_ledger_delete_guard.sql)
+18. [`supabase/migrations/0018_ask_ai_mentor_mission.sql`](./supabase/migrations/0018_ask_ai_mentor_mission.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a

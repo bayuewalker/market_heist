@@ -11,7 +11,13 @@ import Button from "@/components/ui/Button";
 
 export const dynamic = "force-dynamic";
 
-export default async function MentorPage() {
+export default async function MentorPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ signal?: string }>;
+}) {
+  const focusedSignalId = (await searchParams).signal?.trim() || null;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -90,6 +96,28 @@ export default async function MentorPage() {
       `rationale: ${latestSignal.rationale ?? "n/a"}.`
     : null;
 
+  // Deep link from a signal card (`?signal=<id>`) — fetch that specific signal,
+  // scoped to this user so one member can't probe another's signal, and hand it
+  // to the chat as a focused context the client auto-asks about on open.
+  const { data: focusedSignal } = focusedSignalId
+    ? await supabase
+        .from("signals")
+        .select("pair, bias, entry, stop, invalidation, tp1, tp2, tp3, rationale, setup_reason, risk_level, status")
+        .eq("id", focusedSignalId)
+        .eq("user_id", user.id)
+        .maybeSingle()
+    : { data: null };
+
+  const focusedSignalContext = focusedSignal
+    ? `The signal the member is asking about — pair: ${focusedSignal.pair}, bias: ${focusedSignal.bias}, ` +
+      `entry: ${focusedSignal.entry ?? "n/a"}, stop: ${focusedSignal.stop ?? "n/a"}, ` +
+      `invalidation: ${focusedSignal.invalidation ?? "n/a"}, ` +
+      `targets: ${[focusedSignal.tp1, focusedSignal.tp2, focusedSignal.tp3].filter((v) => v !== null).join(" / ") || "n/a"}, ` +
+      `risk level: ${focusedSignal.risk_level ?? "n/a"}, status: ${focusedSignal.status}, ` +
+      `setup: ${focusedSignal.setup_reason ?? "n/a"}, rationale: ${focusedSignal.rationale ?? "n/a"}.`
+    : null;
+  const focusedSignalLabel = focusedSignal ? `${focusedSignal.pair} ${focusedSignal.bias}` : null;
+
   const journalSummaryContext =
     journalRows && journalRows.length > 0
       ? `Member's last ${journalRows.length} journaled trades: ` +
@@ -120,6 +148,8 @@ export default async function MentorPage() {
         journalSummaryContext={journalSummaryContext}
         overtradingContext={overtradingContext}
         brokerContext={brokerContext}
+        focusedSignalContext={focusedSignalContext}
+        focusedSignalLabel={focusedSignalLabel}
       />
       <PositionSizeCalculator />
       <BotTemplateGenerator />
