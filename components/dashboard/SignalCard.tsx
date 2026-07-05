@@ -148,7 +148,7 @@ export default function SignalCard({
           className="inline-flex items-center gap-1.5 text-xs font-medium text-accent-strong transition-colors hover:text-accent"
         >
           <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          Ask Mentor about this signal
+          Ask Mentor Heister about this signal
         </Link>
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>

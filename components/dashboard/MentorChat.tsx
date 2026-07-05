@@ -32,16 +32,19 @@ export default function MentorChat({
 
   const focusedMessage = `Explain this ${focusedSignalLabel ?? "signal"} in plain, risk-first language — the bias, entry, invalidation, targets, and what would make this setup wrong.`;
 
-  // When arriving from a signal card's "Ask Mentor about this signal" deep link,
-  // auto-ask about that specific signal once so the explanation is already
-  // generating on open. Ref-guarded so React's dev double-mount can't double-fire.
-  const autoAskedRef = useRef(false);
+  // When arriving from a signal card's "Ask Mentor Heister about this signal"
+  // deep link, auto-ask about that specific signal so the explanation is
+  // already generating on open. Keyed off the focused context so it also fires
+  // when the member navigates client-side to a different `?signal=` while the
+  // component stays mounted; the ref guards against re-asking the same signal
+  // (incl. React's dev double-mount).
+  const lastAskedContextRef = useRef<string | null>(null);
   useEffect(() => {
-    if (autoAskedRef.current || !focusedSignalContext) return;
-    autoAskedRef.current = true;
+    if (!focusedSignalContext || lastAskedContextRef.current === focusedSignalContext) return;
+    lastAskedContextRef.current = focusedSignalContext;
     send(focusedMessage, focusedSignalContext);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [focusedSignalContext]);
 
   const quickActions = (
     [

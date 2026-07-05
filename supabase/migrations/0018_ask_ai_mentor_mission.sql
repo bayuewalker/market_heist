@@ -5,7 +5,7 @@
 -- isMissionSatisfied() — same pull-based pattern as the other missions.
 
 insert into public.missions (mission_key, public_name, description, points_reward, trigger_type, sort_order) values
-  ('consult_the_mentor', 'Consult the Mentor', 'Ask AI Mentor Heister before your first setup.', 100, 'use_ai_mentor', 9)
+  ('consult_the_mentor', 'Consult the Mentor', 'Ask Mentor Heister before your first setup.', 100, 'use_ai_mentor', 9)
 on conflict (mission_key) do update set
   public_name   = excluded.public_name,
   description   = excluded.description,

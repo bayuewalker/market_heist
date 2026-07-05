@@ -14,9 +14,10 @@ export const dynamic = "force-dynamic";
 export default async function MentorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ signal?: string }>;
+  searchParams: Promise<{ signal?: string | string[] }>;
 }) {
-  const focusedSignalId = (await searchParams).signal?.trim() || null;
+  const signalParam = (await searchParams).signal;
+  const focusedSignalId = (Array.isArray(signalParam) ? signalParam[0] : signalParam)?.trim() || null;
 
   const supabase = await createClient();
   const {

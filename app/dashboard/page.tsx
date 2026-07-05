@@ -153,7 +153,7 @@ export default async function DashboardOverview() {
           </div>
         </div>
         <span className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-[#06120d] transition-colors group-hover:bg-accent-strong sm:self-auto">
-          Ask Mentor
+          Open Mentor Heister
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </span>
       </Link>
