@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getTelegramBotConfig } from "@/lib/telegram-settings";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
@@ -14,10 +16,13 @@ import FooterCTA from "@/components/FooterCTA";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const telegramBotUsername =
-    process.env.TELEGRAM_BOT_USERNAME && process.env.TELEGRAM_BOT_TOKEN
-      ? process.env.TELEGRAM_BOT_USERNAME
-      : undefined;
+  // Telegram Login is additive — only render the widget when the bot is
+  // actually configured (admin-set via /admin/settings, or the env-var
+  // fallback). `bot_settings` has no RLS policy for any role, so this read
+  // needs the service-role client, not the cookie-aware one below.
+  const admin = createAdminClient();
+  const { botToken, botUsername } = await getTelegramBotConfig(admin);
+  const telegramBotUsername = botToken && botUsername ? botUsername : undefined;
 
   // The Playmaker persona, admin-editable via /admin/character. Defensive by
   // design: if no row is active (or the query fails), Hero just renders

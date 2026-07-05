@@ -9,6 +9,7 @@ const HELP_TEXT = `<b>Market Heist commands</b>
 /start - link your account and see the welcome intro
 /signal - your latest signal
 /mission - mission status
+/mentor - ask Mentor Heister
 /brokers - broker referral links
 /rank - your Heister Rank
 /profile - your account status
@@ -47,7 +48,7 @@ async function handleStart(admin: SupabaseClient<Database>, from: TelegramFrom, 
       .maybeSingle();
 
     if (!linkCode || linkCode.consumed_at || new Date(linkCode.expires_at).getTime() < Date.now()) {
-      return sendTelegramMessage(from.id, "That link code is invalid or expired. Generate a new one from your dashboard.");
+      return sendTelegramMessage(admin, from.id, "That link code is invalid or expired. Generate a new one from your dashboard.");
     }
 
     const { data: existingForTelegram } = await admin
@@ -56,7 +57,7 @@ async function handleStart(admin: SupabaseClient<Database>, from: TelegramFrom, 
       .eq("telegram_id", from.id)
       .maybeSingle();
     if (existingForTelegram && existingForTelegram.user_id !== linkCode.user_id) {
-      return sendTelegramMessage(from.id, "This Telegram account is already linked to a different Market Heist account.");
+      return sendTelegramMessage(admin, from.id, "This Telegram account is already linked to a different Market Heist account.");
     }
 
     const { data: existingForUser } = await admin
@@ -71,7 +72,7 @@ async function handleStart(admin: SupabaseClient<Database>, from: TelegramFrom, 
         telegram_username: from.username ?? null,
       });
       if (linkErr) {
-        return sendTelegramMessage(from.id, "Linking failed on our end — please try again in a moment.");
+        return sendTelegramMessage(admin, from.id, "Linking failed on our end — please try again in a moment.");
       }
     }
 
@@ -86,17 +87,18 @@ async function handleStart(admin: SupabaseClient<Database>, from: TelegramFrom, 
       console.error("Failed to mark telegram_link_code consumed:", consumeErr.message);
     }
 
-    return sendTelegramMessage(from.id, `${intro}\n\nYour account is linked. Choose your path:`, {
+    return sendTelegramMessage(admin, from.id, `${intro}\n\nYour account is linked. Choose your path:`, {
       buttons: [DASHBOARD_BUTTONS],
     });
   }
 
   const linkedUserId = await getLinkedUserId(admin, from.id);
   if (linkedUserId) {
-    return sendTelegramMessage(from.id, `${intro}\n\nWelcome back. Choose your path:`, { buttons: [DASHBOARD_BUTTONS] });
+    return sendTelegramMessage(admin, from.id, `${intro}\n\nWelcome back. Choose your path:`, { buttons: [DASHBOARD_BUTTONS] });
   }
 
   return sendTelegramMessage(
+    admin,
     from.id,
     `${intro}\n\nLink your Market Heist account first — open your dashboard and tap "Link Telegram" under Account.`,
     { buttons: [[{ text: "Open Dashboard", url: appUrl("/dashboard/account") }]] },
@@ -106,7 +108,7 @@ async function handleStart(admin: SupabaseClient<Database>, from: TelegramFrom, 
 async function requireLinked(admin: SupabaseClient<Database>, from: TelegramFrom): Promise<string | null> {
   const linkedUserId = await getLinkedUserId(admin, from.id);
   if (!linkedUserId) {
-    await sendTelegramMessage(from.id, "Link your Market Heist account first — open your dashboard and tap \"Link Telegram\" under Account.", {
+    await sendTelegramMessage(admin, from.id, "Link your Market Heist account first — open your dashboard and tap \"Link Telegram\" under Account.", {
       buttons: [[{ text: "Open Dashboard", url: appUrl("/dashboard/account") }]],
     });
   }
@@ -121,10 +123,10 @@ async function handleBrokers(admin: SupabaseClient<Database>, from: TelegramFrom
     .order("sort", { ascending: true });
 
   if (!brokers || brokers.length === 0) {
-    return sendTelegramMessage(from.id, "No broker partners are available right now.");
+    return sendTelegramMessage(admin, from.id, "No broker partners are available right now.");
   }
 
-  return sendTelegramMessage(from.id, "Open a broker referral link, then submit your UID on the Broker Station:", {
+  return sendTelegramMessage(admin, from.id, "Open a broker referral link, then submit your UID on the Broker Station:", {
     buttons: brokers.map((b) => [{ text: b.name, url: b.referral_base_url }]),
   });
 }
@@ -153,7 +155,7 @@ async function handleProfile(admin: SupabaseClient<Database>, from: TelegramFrom
     `<b>Heist Points:</b> ${points} HP`,
     `<b>Rank:</b> ${escapeTelegramHtml(rank?.name ?? "Rookie Heister")}`,
   ];
-  return sendTelegramMessage(from.id, lines.join("\n"));
+  return sendTelegramMessage(admin, from.id, lines.join("\n"));
 }
 
 async function handleRank(admin: SupabaseClient<Database>, from: TelegramFrom) {
@@ -163,6 +165,7 @@ async function handleRank(admin: SupabaseClient<Database>, from: TelegramFrom) {
   const points = await getPointsBalance(admin, userId);
   const rank = await getRankForPoints(admin, points);
   return sendTelegramMessage(
+    admin,
     from.id,
     `<b>Rank:</b> ${escapeTelegramHtml(rank?.name ?? "Rookie Heister")}\n<b>Heist Points:</b> ${points} HP`,
     { buttons: [[{ text: "View missions", url: appUrl("/dashboard/missions") }]] },
@@ -188,7 +191,7 @@ async function handleMission(admin: SupabaseClient<Database>, from: TelegramFrom
       ? `${claimable.length} ready to claim: ${claimable.map((m) => escapeTelegramHtml(m.public_name)).join(", ")}`
       : "Nothing to claim right now — keep going!",
   ];
-  return sendTelegramMessage(from.id, lines.join("\n"), {
+  return sendTelegramMessage(admin, from.id, lines.join("\n"), {
     buttons: [[{ text: "Open missions", url: appUrl("/dashboard/missions") }]],
   });
 }
@@ -206,7 +209,7 @@ async function handleSignal(admin: SupabaseClient<Database>, from: TelegramFrom)
     .maybeSingle();
 
   if (!signal) {
-    return sendTelegramMessage(from.id, "No signals yet — request one from the dashboard.", {
+    return sendTelegramMessage(admin, from.id, "No signals yet — request one from the dashboard.", {
       buttons: [[{ text: "Request a signal", url: appUrl("/dashboard/request") }]],
     });
   }
@@ -220,9 +223,22 @@ async function handleSignal(admin: SupabaseClient<Database>, from: TelegramFrom)
     signal.stop !== null ? `Stop: ${signal.stop}` : null,
     signal.rationale ? `\n${escapeTelegramHtml(signal.rationale)}` : null,
   ].filter(Boolean);
-  return sendTelegramMessage(from.id, lines.join("\n"), {
+  return sendTelegramMessage(admin, from.id, lines.join("\n"), {
     buttons: [[{ text: "Open full analysis", url: appUrl("/dashboard/signals") }]],
   });
+}
+
+// QA-A2 (launch-readiness audit): a deep link into Mentor Heister, so the bot
+// surfaces the same activation hook the dashboard/signal-room CTAs do (#45).
+// No requireLinked() gate — /dashboard/ai-mentor already redirects to /login
+// on its own, and Telegram-link status isn't the same thing as a web session.
+async function handleMentor(admin: SupabaseClient<Database>, from: TelegramFrom) {
+  return sendTelegramMessage(
+    admin,
+    from.id,
+    "Ask Mentor Heister — explain a signal, size a position, or pressure-test a setup before you enter.",
+    { buttons: [[{ text: "Open Mentor Heister", url: appUrl("/dashboard/ai-mentor") }]] },
+  );
 }
 
 /**
@@ -242,7 +258,7 @@ export async function handleTelegramCommand(
       await handleStart(admin, from, args[0]);
       return { eventType: "command.start" };
     case "/help":
-      await sendTelegramMessage(from.id, HELP_TEXT);
+      await sendTelegramMessage(admin, from.id, HELP_TEXT);
       return { eventType: "command.help" };
     case "/brokers":
       await handleBrokers(admin, from);
@@ -259,8 +275,11 @@ export async function handleTelegramCommand(
     case "/signal":
       await handleSignal(admin, from);
       return { eventType: "command.signal" };
+    case "/mentor":
+      await handleMentor(admin, from);
+      return { eventType: "command.mentor" };
     default:
-      await sendTelegramMessage(from.id, `Unknown command. Try /help.`);
+      await sendTelegramMessage(admin, from.id, `Unknown command. Try /help.`);
       return { eventType: "command.unknown" };
   }
 }

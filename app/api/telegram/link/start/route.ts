@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { botDeepLink } from "@/lib/telegram";
+import { getTelegramBotConfig } from "@/lib/telegram-settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,11 +23,11 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "You must be logged in." }, { status: 401 });
 
-  if (!process.env.TELEGRAM_BOT_USERNAME) {
+  const admin = createAdminClient();
+  const { botUsername } = await getTelegramBotConfig(admin);
+  if (!botUsername) {
     return NextResponse.json({ error: "Telegram isn't configured yet." }, { status: 503 });
   }
-
-  const admin = createAdminClient();
 
   const { data: existingLink } = await admin
     .from("telegram_links")
@@ -58,5 +59,5 @@ export async function POST() {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ code, deep_link: botDeepLink(code) });
+  return NextResponse.json({ code, deep_link: await botDeepLink(admin, code) });
 }

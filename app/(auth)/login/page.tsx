@@ -1,18 +1,22 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getTelegramBotConfig } from "@/lib/telegram-settings";
 import AuthForm from "@/components/auth/AuthForm";
 
 export const metadata: Metadata = {
   title: "Log in",
 };
 
-export default function LoginPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage() {
   // Telegram Login is additive — only render the widget when the bot is
-  // actually configured for it (§2/M13's callback needs both to sign anyone in).
-  const telegramBotUsername =
-    process.env.TELEGRAM_BOT_USERNAME && process.env.TELEGRAM_BOT_TOKEN
-      ? process.env.TELEGRAM_BOT_USERNAME
-      : undefined;
+  // actually configured for it (§2/M13's callback needs both to sign anyone
+  // in). Admin-set via /admin/settings, falling back to env vars.
+  const admin = createAdminClient();
+  const { botToken, botUsername } = await getTelegramBotConfig(admin);
+  const telegramBotUsername = botToken && botUsername ? botUsername : undefined;
 
   return (
     <div className="flex flex-col gap-6">

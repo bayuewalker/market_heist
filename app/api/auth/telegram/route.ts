@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TELEGRAM_LOGIN_STATE_COOKIE, timingSafeEqualStrings, verifyTelegramLoginPayload } from "@/lib/telegram-login";
+import { getTelegramBotConfig } from "@/lib/telegram-settings";
 import { writeAuditLog } from "@/lib/rewards";
 import { resolvePostLoginPath } from "@/lib/post-login-redirect";
 
@@ -43,10 +44,11 @@ export async function GET(request: Request) {
     return loginError("invalid_state");
   }
 
-  const payload = verifyTelegramLoginPayload(url.searchParams);
+  const admin = createAdminClient();
+  const { botToken } = await getTelegramBotConfig(admin);
+  const payload = verifyTelegramLoginPayload(url.searchParams, botToken);
   if (!payload) return loginError("invalid");
 
-  const admin = createAdminClient();
   const { data: link, error: linkLookupError } = await admin
     .from("telegram_links")
     .select("user_id")

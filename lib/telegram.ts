@@ -6,6 +6,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
+import { getTelegramBotConfig } from "@/lib/telegram-settings";
 
 export type InlineButton = { text: string; url: string };
 
@@ -20,17 +21,19 @@ export function escapeTelegramHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function apiBase() {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) throw new Error("TELEGRAM_BOT_TOKEN is not configured.");
+function apiBase(token: string) {
   return `https://api.telegram.org/bot${token}`;
 }
 
 export async function sendTelegramMessage(
+  admin: SupabaseClient<Database>,
   chatId: number,
   text: string,
   opts: { buttons?: InlineButton[][] } = {},
 ): Promise<void> {
+  const { botToken } = await getTelegramBotConfig(admin);
+  if (!botToken) throw new Error("Telegram bot token is not configured.");
+
   const body: Record<string, unknown> = {
     chat_id: chatId,
     text,
@@ -40,7 +43,7 @@ export async function sendTelegramMessage(
     body.reply_markup = { inline_keyboard: opts.buttons.map((row) => row.map((b) => ({ text: b.text, url: b.url }))) };
   }
 
-  const res = await fetch(`${apiBase()}/sendMessage`, {
+  const res = await fetch(`${apiBase(botToken)}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -70,10 +73,10 @@ export function appUrl(path: string): string {
   return `${base}${path}`;
 }
 
-export function botDeepLink(code: string): string {
-  const username = process.env.TELEGRAM_BOT_USERNAME;
-  if (!username) throw new Error("TELEGRAM_BOT_USERNAME is not configured.");
-  return `https://t.me/${username}?start=${encodeURIComponent(code)}`;
+export async function botDeepLink(admin: SupabaseClient<Database>, code: string): Promise<string> {
+  const { botUsername } = await getTelegramBotConfig(admin);
+  if (!botUsername) throw new Error("Telegram bot username is not configured.");
+  return `https://t.me/${botUsername}?start=${encodeURIComponent(code)}`;
 }
 
 /**
@@ -88,7 +91,8 @@ export async function notifyUserByTelegram(
   text: string,
   opts: { buttons?: InlineButton[][] } = {},
 ): Promise<void> {
-  if (!process.env.TELEGRAM_BOT_TOKEN) return;
+  const { botToken } = await getTelegramBotConfig(admin);
+  if (!botToken) return;
 
   const { data: link } = await admin
     .from("telegram_links")
@@ -98,7 +102,7 @@ export async function notifyUserByTelegram(
   if (!link) return;
 
   try {
-    await sendTelegramMessage(link.telegram_id, text, opts);
+    await sendTelegramMessage(admin, link.telegram_id, text, opts);
   } catch {
     // Best-effort — a failed push must not break the caller's own flow.
   }
