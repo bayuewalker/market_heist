@@ -13,6 +13,7 @@ import {
   Menu,
   Radar,
   Rocket,
+  Settings,
   ShieldCheck,
   Trophy,
   Users,
@@ -38,6 +39,7 @@ const items: NavItem[] = [
   { href: "/admin/donations", label: "Donations", icon: HeartHandshake },
   { href: "/admin/payments", label: "Payments", icon: Wallet },
   { href: "/admin/character", label: "Character", icon: UserRound },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AdminNav({ email }: { email: string }) {

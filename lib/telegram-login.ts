@@ -39,9 +39,8 @@ export type TelegramLoginPayload = {
   auth_date: number;
 };
 
-export function verifyTelegramLoginPayload(params: URLSearchParams): TelegramLoginPayload | null {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) return null;
+export function verifyTelegramLoginPayload(params: URLSearchParams, botToken: string | null): TelegramLoginPayload | null {
+  if (!botToken) return null;
 
   const hash = params.get("hash");
   const id = params.get("id");
@@ -56,7 +55,7 @@ export function verifyTelegramLoginPayload(params: URLSearchParams): TelegramLog
   entries.sort();
   const dataCheckString = entries.join("\n");
 
-  const secretKey = createHash("sha256").update(token).digest();
+  const secretKey = createHash("sha256").update(botToken).digest();
   const computedHash = createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
   if (!/^[0-9a-f]+$/i.test(hash) || !timingSafeEqualStrings(computedHash, hash.toLowerCase())) return null;
 

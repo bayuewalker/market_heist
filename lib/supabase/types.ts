@@ -185,6 +185,13 @@ export type AuditLogRow = {
   created_at: string;
 };
 
+export type BotSettingsRow = {
+  id: true;
+  telegram_bot_token: string | null;
+  telegram_bot_username: string | null;
+  updated_at: string;
+};
+
 export type CharacterConfigRow = {
   id: string;
   character_key: string;
@@ -473,6 +480,12 @@ export type Database = {
         Insert: Omit<CharacterConfigRow, "id" | "is_active" | "created_at" | "updated_at"> &
           Partial<Pick<CharacterConfigRow, "id" | "is_active" | "created_at" | "updated_at">>;
         Update: Partial<CharacterConfigRow>;
+        Relationships: [];
+      };
+      bot_settings: {
+        Row: BotSettingsRow;
+        Insert: Partial<BotSettingsRow>;
+        Update: Partial<BotSettingsRow>;
         Relationships: [];
       };
       telegram_links: {

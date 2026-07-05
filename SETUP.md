@@ -31,6 +31,7 @@ migrations **in order**:
 16. [`supabase/migrations/0016_trust_compliance.sql`](./supabase/migrations/0016_trust_compliance.sql)
 17. [`supabase/migrations/0017_reward_ledger_delete_guard.sql`](./supabase/migrations/0017_reward_ledger_delete_guard.sql)
 18. [`supabase/migrations/0018_ask_ai_mentor_mission.sql`](./supabase/migrations/0018_ask_ai_mentor_mission.sql)
+19. [`supabase/migrations/0019_bot_settings.sql`](./supabase/migrations/0019_bot_settings.sql)
 
 `0001` creates the `plans`, `profiles`, and `signals` tables, Row Level Security
 policies (each user only sees their own data), a trigger that auto-creates a
@@ -214,7 +215,11 @@ the code to create a `telegram_links` row.
 To wire up the bot:
 
 1. Create a bot with [@BotFather](https://t.me/BotFather); set
-   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME`.
+   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_USERNAME` — **or** set them from
+   `/admin/settings` instead (QA-A2, migration `0019`'s `bot_settings`
+   table). An admin-set value there always overrides the env vars, without a
+   redeploy; the token is write-only in the admin UI (never displayed again
+   after saving). `TELEGRAM_WEBHOOK_SECRET` stays env-var-only either way.
 2. Set `TELEGRAM_WEBHOOK_SECRET` to a long random string, then register the
    webhook (once, after deploying):
    ```bash
@@ -223,7 +228,7 @@ To wire up the bot:
      -d "secret_token=$TELEGRAM_WEBHOOK_SECRET"
    ```
 3. Commands: `/start`, `/help`, `/brokers`, `/profile`, `/rank`, `/mission`,
-   `/signal`.
+   `/signal`, `/mentor` (deep-links to Mentor Heister, added in QA-A2).
 
 All bot interactions are logged to `bot_events`; every webhook request must
 carry the matching `X-Telegram-Bot-Api-Secret-Token` header or it's rejected.
