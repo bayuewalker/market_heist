@@ -7,6 +7,12 @@ import Testimonials from "@/components/Testimonials";
 import FAQ from "@/components/FAQ";
 import FooterCTA from "@/components/FooterCTA";
 
+// Reading character_configs via the cookie-aware server client makes this
+// page dynamic (it calls the implicitly-dynamic cookies() API) — declared
+// explicitly, matching the same pattern on every other data-fetching page
+// in this codebase, rather than leaving the static->dynamic switch implicit.
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const telegramBotUsername =
     process.env.TELEGRAM_BOT_USERNAME && process.env.TELEGRAM_BOT_TOKEN
